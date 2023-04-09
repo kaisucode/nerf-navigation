@@ -1,6 +1,9 @@
 
 *.bag
 
+src/champ/
+src/champ_teleop/
+
 devel/
 logs/
 build/
