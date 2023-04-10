@@ -5,79 +5,142 @@ import numpy as np
 import rospy
 from std_msgs.msg import String
 from sensor_msgs.msg import Imu, Image
+from nav_msgs.msg import Odometry
+import cv2
+import matplotlib.pyplot as plt
 
-class Listeners():
+class SensorListener():
 
     def __init__(self):
+
+        self.rgb_topic_str = "/camera/rgb/image_raw"
+        self.depth_topic_str = "/camera/depth/image_raw"
+        self.odom_topic_str = "/odom"
+
+        # the video stream
+        self.rgb_image = None
+        self.depth_image = None
+        self.odom_linear = 1
+        self.time = None
+
+        #
+        self.sensor_initialzed = False
+        self.in_callback = False
+
+        # start listener
         self.initListener()
 
     def initListener(self): 
+        print("initializing the sensor listener node...")
         # rgb camera
-        topic_name = "/camera/rgb/image_raw"
-        rospy.init_node('listener', anonymous=True)
-        rospy.Subscriber(topic_name, Image, self.rgbCallback)
+        rospy.init_node('sensors')
+        rospy.Subscriber(self.rgb_topic_str, Image, self.rgbCallback)
+        rospy.Subscriber(self.depth_topic_str, Image, self.depthCallback)
+        # rospy.Subscriber(self.odom_topic_str, Odometry, self.odomCallback)
 
-        # depth camera
-        topic_name = "/camera/depth/image_raw"
-        rospy.init_node('listener2', anonymous=True)
-        rospy.Subscriber(topic_name, Image, self.depthCallback)
-
-        rospy.spin()
+    def updateTime(self, msg):
+        self.last_time_secs = msg.header.stamp.secs
+        self.last_time_nsecs = msg.header.stamp.nsecs
+        self.last_state_transition_time = (self.last_time_secs + self.last_time_nsecs*1e-9)
 
     def rgbCallback(self, data):
-        # handle rgb image
-        #  im = np.frombuffer(data.data, dtype=np.uint8).reshape(data.height, data.width, -1)
-        #  img = pilImage.fromarray(im, "RGB")
-        #  img.show()
-        #  rospy.loginfo(data)
-        print("rgb callback")
+        # check if the callback is lock by others.
+        if self.in_callback:
+            return # if the listener is locked by other callback, skip this one.
+        else:
+            self.in_callback = True # lock the rgb sensor callback
+        
+        # convert the image
+        im = np.frombuffer(data.data, dtype=np.uint8).reshape(data.height, data.width, -1)
+        img = pilImage.fromarray(im, "RGB")
+        
+        # record the lastest image
+        self.rgb_image = np.array(img)
+
+        # update the time line
+        self.updateTime(data)
+
+        # release the callback
+        self.in_callback = False
+
+        # sensor initialized
+        if (self.rgb_image is not None) and \
+            (self.depth_image is not None) and \
+                (self.odom_linear is not None):
+                self.sensor_initialzed = True
+        # release the callback
+        self.in_callback = False
 
     def depthCallback(self, data):
-        # handle depth image
-        #  im = np.frombuffer(data.data, dtype=np.uint8).reshape(data.height, data.width, -1)
-        #  print(im.shape)
-        #  img = pilImage.fromarray(im, "L")
-        #  img.show()
-        #  rospy.loginfo(data)
-        print("depth callback")
+        # check if the callback is lock by others.
+        if self.in_callback:
+            return # if the listener is locked by other callback, skip this one.
+        else:
+            self.in_callback = True # lock the rgb sensor callback
 
+        # convert the data to depth image
+        im = np.frombuffer(data.data, dtype=np.uint8)
+        depthIm = im.reshape(data.height, data.width, 4)
+        depthIm = depthIm[:,:,2]
+        img = pilImage.fromarray(depthIm, "L")
 
-#  def callback(data): 
+        # record the lastest depth image
+        self.depth_image = np.asanyarray(img)[:, :, np.newaxis]
+        # self.depth_image = depthIm[:, :, np.newaxis]
+        # update the time line
+        self.updateTime(data)
 
-    # handle rgb image
-    #  im = np.frombuffer(data.data, dtype=np.uint8).reshape(data.height, data.width, -1)
-    #  img = pilImage.fromarray(im, "RGB")
-    #  img.show()
-    #  rospy.loginfo(data)
+        # sensor initialized
+        if (self.rgb_image is not None) and \
+            (self.depth_image is not None) and \
+                (self.odom_linear is not None):
+                self.sensor_initialzed = True
+        # release the callback
+        self.in_callback = False
 
-    # handle depth image
-    #  im = np.frombuffer(data.data, dtype=np.uint8).reshape(data.height, data.width, -1)
-    #  print(im.shape)
-    #  img = pilImage.fromarray(im, "L")
-    #  img.show()
-    #  rospy.loginfo(data)
+    def odomCallback(self, data):
+        # check if the callback is lock by others.
+        if self.in_callback:
+            return # if the listener is locked by other callback, skip this one.
+        else:
+            self.in_callback = True # lock the rgb sensor callback
 
-#  def listener(): 
+        # log the odom linear
+        self.odom_linear = np.asanyarray(data.Twist.linear)
 
-    # rgb camera
-    #  topic_name = "/camera/rgb/image_raw"
-    #  rospy.init_node('listener', anonymous=True)
-    #  rospy.Subscriber(topic_name, Image, callback)
+        # update the time line
+        self.updateTime(data)
 
-    # depth camera
-    #  topic_name = "/camera/depth/image_raw"
-    #  rospy.init_node('listener', anonymous=True)
-    #  rospy.Subscriber(topic_name, Image, callback)
+        # sensor initialized
+        if (self.rgb_image is not None) and \
+            (self.depth_image is not None) and \
+                (self.odom_linear is not None):
+                self.sensor_initialzed = True
 
-    # imu data
-    #  topic_name = "/imu/data"
-    #  rospy.init_node('listener', anonymous=True)
-    #  rospy.Subscriber(topic_name, Imu, callback)
+        # release the callback
+        self.in_callback = False
 
-    #  rospy.spin()
+if __name__ == '__main__':
+    # setting for the sensor listener
+    sensors_listener = SensorListener()
 
-if __name__ == '__main__': 
-    l = Listeners()
-    #  listener()
-    #  print("hello")
+    # task 
+    loop_hz = 60
+    rate = rospy.Rate(loop_hz)
+    
+    while not rospy.is_shutdown():
+        if not sensors_listener.sensor_initialzed:
+            continue
+        # Show images
+        # img = pilImage.fromarray(sensors_listener.rgb_image, "RGB")
+        # img.show()
+        cv2.namedWindow('RGB', cv2.WINDOW_AUTOSIZE)
+        cv2.imshow('RGB', sensors_listener.rgb_image)
+        cv2.namedWindow('Depth', cv2.WINDOW_AUTOSIZE)
+        cv2.imshow('Depth', sensors_listener.depth_image)
+        Key = cv2.waitKey(1)
+        if Key == 27:
+            break
+        rate.sleep()
+
 
