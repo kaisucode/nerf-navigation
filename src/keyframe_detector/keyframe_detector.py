@@ -36,15 +36,39 @@ class KeyframeDetector():
         
         good = []
         for m,n in matches:
-            if m.distance < 0.75 * n.distance:
-                good.append([m])
+            if m.distance < 0.7 * n.distance:
+                good.append(m)
         
         # cv.drawMatchesKnn expects list of lists as matches.
-        match_img = cv.drawMatchesKnn(gray, kp, 
+        draw_params = dict(matchColor = (0,255,0), 
+                           singlePointColor = None
+        )
+        match_img = cv.drawMatches(gray, kp, 
                                  prev_gray, prev_kp, 
                                  good, None,
-                                 flags=cv.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS)
+                                 **draw_params)
         cv.imwrite("./test.jpg", match_img)
+
+        # RANSAC
+        query_pts = np.float32([kp[m.queryIdx].pt for m in good]).reshape(-1,1,2)
+        train_pts = np.float32([prev_kp[m.trainIdx].pt for m in good]).reshape(-1,1,2)
+        M, mask = cv.findHomography(query_pts, train_pts, cv.RANSAC, 5.0)
+        matchesMask = mask.ravel().tolist()
+
+         
+        # render
+        draw_params = dict(matchColor = (0,255,0), 
+                           singlePointColor = None,
+                           matchesMask = matchesMask # draw only inliers
+        )
+
+        match_img = cv.drawMatches(gray, kp, 
+                                 prev_gray, prev_kp, 
+                                 good, None,
+                                 **draw_params)
+        cv.imwrite("./test_RANSAC.jpg", match_img)
+
+
         pass
 
     def detectKeyframe(self):
