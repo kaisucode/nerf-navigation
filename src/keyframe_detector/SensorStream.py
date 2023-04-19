@@ -22,6 +22,7 @@ class SensorListener():
         self.depth_image = None
         self.odom_linear = None
         self.odom_angular = None
+        self.odom_pose = None
         self.time = None
 
         #
@@ -107,8 +108,16 @@ class SensorListener():
             self.in_callback = True # lock the rgb sensor callback
 
         # log the odom linear
-        self.odom_linear = np.asanyarray(data.twist.twist.linear)
-        self.odom_angular = np.asanyarray(data.twist.twist.angular)
+        self.odom_linear = np.asanyarray([data.twist.twist.linear.x, 
+                                          data.twist.twist.linear.y, 
+                                          data.twist.twist.linear.z])
+        self.odom_angular = np.asanyarray([data.twist.twist.angular.x, 
+                                           data.twist.twist.angular.y, 
+                                           data.twist.twist.angular.z])
+
+        self.odom_pose = np.asanyarray([data.pose.pose.position.x, 
+                                        data.pose.pose.position.y, 
+                                        data.pose.pose.position.z])
 
         # update the time line
         self.updateTime(data)
