@@ -2,6 +2,7 @@ import numpy as np
 import cv2 as cv
 import matplotlib.pyplot as plt
 import os
+from SensorStream import * 
 
 class KeyframeDetector():
     def __init__(self):
@@ -9,6 +10,13 @@ class KeyframeDetector():
         self.detector = cv.SIFT_create()
         # self.detector = cv.ORB_create()
         self.matcher = cv.BFMatcher(cv.NORM_L2)
+        # reference frame
+        self.ref_frame = None
+        # keyframe buffer
+        self.keyframe_buffer = []
+        
+        # keyframe detector constant
+        self.match_threshold = 20
         pass
 
     def computeFeature(self, img_arr, output_name):
@@ -24,7 +32,7 @@ class KeyframeDetector():
 
         pass
 
-    def frameMatch(self, img_arr, prev_img_arr):
+    def frameMatch(self, img_arr, prev_img_arr, save_name):
         # match the current img with the prev image
         gray = cv.cvtColor(img_arr, cv.COLOR_BGR2GRAY)
         kp, des = self.detector.detectAndCompute(gray, None)
@@ -57,21 +65,32 @@ class KeyframeDetector():
 
          
         # render
-        draw_params = dict(matchColor = (0,255,0), 
-                           singlePointColor = None,
-                           matchesMask = matchesMask # draw only inliers
-        )
+        if np.sum(matchesMask) < self.match_threshold:
+            draw_params = dict(matchColor = (0,255,0), 
+                            singlePointColor = None,
+                            matchesMask = matchesMask # draw only inliers
+            )
 
-        match_img = cv.drawMatches(gray, kp, 
-                                 prev_gray, prev_kp, 
-                                 good, None,
-                                 **draw_params)
-        cv.imwrite("./test_RANSAC.jpg", match_img)
+            match_img = cv.drawMatches(gray, kp, 
+                                    prev_gray, prev_kp, 
+                                    good, None,
+                                    **draw_params)
+            cv.imwrite(save_name, match_img)
 
 
-        pass
+        return np.sum(matchesMask)
 
-    def detectKeyframe(self):
+    def run(self, img_arr, save_name):
+        # if the reference frame is not set, set it.
+        if self.ref_frame is None:
+            self.keyframe_buffer.append(img_arr)
+            self.ref_frame = img_arr
+        # keyframe detection
+        matched_feature = self.frameMatch(img_arr, self.ref_frame, save_name)
+        if matched_feature < self.match_threshold:
+            self.keyframe_buffer.append(img_arr)
+            self.ref_frame = img_arr
+
         pass
 
     def readImage(self, file_name):
@@ -80,25 +99,43 @@ class KeyframeDetector():
 
 
 if __name__ == "__main__":
-    print("Start...")
+    # setting for the sensor listener
+    sensors_listener = SensorListener()
     kfd = KeyframeDetector()
+    # task settings
+    loop_hz = 60
+    rate = rospy.Rate(loop_hz)
     
-    # read image
-    image_name = "./date/img0.jpg"
-    img0_arr = kfd.readImage(image_name)
+    # task begins
+    frame = 0
+    while not rospy.is_shutdown():
+        if not sensors_listener.sensor_initialzed:
+            continue
+        # ---- keyframe detection ----
+        kfd.run(sensors_listener.rgb_image, "frame_"+str(frame)+".jpg")
+        print("length of the keyframe buffer", len(kfd.keyframe_buffer))
+        frame += 1
+        rate.sleep()
 
-    image_name = "./date/img1.jpg"
-    img1_arr = kfd.readImage(image_name)
-    print("image shape: ", img0_arr.shape)
+    # print("Start...")
+    # kfd = KeyframeDetector()
+    
+    # # read image
+    # image_name = "./date/img0.jpg"
+    # img0_arr = kfd.readImage(image_name)
 
-    ## feature detection
-    print("Feature detection stage...")
-    img_arr = img0_arr
-    output_name = "./sift_keypoints" + image_name + ".jpg"
-    kfd.computeFeature(img_arr, output_name)
+    # image_name = "./date/img1.jpg"
+    # img1_arr = kfd.readImage(image_name)
+    # print("image shape: ", img0_arr.shape)
 
-    ## feature matching
-    print("feature matching stage...")
-    kfd.frameMatch(img1_arr, img0_arr)
+    # ## feature detection
+    # print("Feature detection stage...")
+    # img_arr = img0_arr
+    # output_name = "./sift_keypoints" + image_name + ".jpg"
+    # kfd.computeFeature(img_arr, output_name)
+
+    # ## feature matching
+    # print("feature matching stage...")
+    # kfd.frameMatch(img1_arr, img0_arr)
 
      
