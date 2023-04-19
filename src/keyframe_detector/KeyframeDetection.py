@@ -80,12 +80,13 @@ class KeyframeDetector():
 
         return np.sum(matchesMask)
 
-    def run(self, img_arr, save_name):
+    def run(self, img_arr, frame_id):
         # if the reference frame is not set, set it.
         if self.ref_frame is None:
             self.keyframe_buffer.append(img_arr)
             self.ref_frame = img_arr
         # keyframe detection
+        save_name = "./keyframes/frame_" + frame_id + ".jpg"
         matched_feature = self.frameMatch(img_arr, self.ref_frame, save_name)
         if matched_feature < self.match_threshold:
             self.keyframe_buffer.append(img_arr)
@@ -107,14 +108,14 @@ if __name__ == "__main__":
     rate = rospy.Rate(loop_hz)
     
     # task begins
-    frame = 0
+    frame_id = 0
     while not rospy.is_shutdown():
         if not sensors_listener.sensor_initialzed:
             continue
         # ---- keyframe detection ----
-        kfd.run(sensors_listener.rgb_image, "frame_"+str(frame)+".jpg")
+        kfd.run(sensors_listener.rgb_image, frame_id)
         print("length of the keyframe buffer", len(kfd.keyframe_buffer))
-        frame += 1
+        frame_id += 1
         rate.sleep()
 
     # print("Start...")

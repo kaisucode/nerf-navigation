@@ -248,7 +248,7 @@ class RRTStar:
         plt.show()
         return path_mat
 if __name__ == '__main__':
-    rrt_star = RRTStar(10000)
+    rrt_star = RRTStar(1000)
     for i in tqdm.tqdm(range(rrt_star.n)):
         # cur_idx_V = i+1
         x_rand_loc = rrt_star.sample()
