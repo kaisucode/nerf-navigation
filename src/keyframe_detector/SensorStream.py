@@ -20,7 +20,8 @@ class SensorListener():
         # the video stream
         self.rgb_image = None
         self.depth_image = None
-        self.odom_linear = 1
+        self.odom_linear = None
+        self.odom_angular = None
         self.time = None
 
         #
@@ -36,7 +37,7 @@ class SensorListener():
         rospy.init_node('sensors')
         rospy.Subscriber(self.rgb_topic_str, Image, self.rgbCallback)
         rospy.Subscriber(self.depth_topic_str, Image, self.depthCallback)
-        # rospy.Subscriber(self.odom_topic_str, Odometry, self.odomCallback)
+        rospy.Subscriber(self.odom_topic_str, Odometry, self.odomCallback)
 
     def updateTime(self, msg):
         self.last_time_secs = msg.header.stamp.secs
@@ -106,7 +107,8 @@ class SensorListener():
             self.in_callback = True # lock the rgb sensor callback
 
         # log the odom linear
-        self.odom_linear = np.asanyarray(data.Twist.linear)
+        self.odom_linear = np.asanyarray(data.twist.twist.linear)
+        self.odom_angular = np.asanyarray(data.twist.twist.angular)
 
         # update the time line
         self.updateTime(data)
@@ -131,9 +133,8 @@ if __name__ == '__main__':
     while not rospy.is_shutdown():
         if not sensors_listener.sensor_initialzed:
             continue
-        # Show images
-        # img = pilImage.fromarray(sensors_listener.rgb_image, "RGB")
-        # img.show()
+
+        # ---- Show images ------
         cv2.namedWindow('RGB', cv2.WINDOW_AUTOSIZE)
         cv2.imshow('RGB', sensors_listener.rgb_image)
         cv2.namedWindow('Depth', cv2.WINDOW_AUTOSIZE)
@@ -141,6 +142,10 @@ if __name__ == '__main__':
         Key = cv2.waitKey(1)
         if Key == 27:
             break
+
+        # ----- state estimation -------
+
+
         rate.sleep()
 
 
