@@ -71,8 +71,8 @@ class NGP(nn.Module):
                     "otype": "FullyFusedMLP",
                     "activation": "ReLU",
                     "output_activation": self.rgb_act,
-                    "n_neurons": 64,
-                    "n_hidden_layers": 2,
+                    "n_neurons": 16,
+                    "n_hidden_layers": 4,
                 }
             )
 

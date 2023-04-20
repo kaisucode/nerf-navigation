@@ -83,7 +83,7 @@ class NeRFSystem(LightningModule):
             poses = batch['pose']
             directions = self.directions
 
-        if self.hparams.optimize_ext:
+        if self.hparams.optimize_ext and split == "train":
             dR = axisangle_to_R(self.dR[batch['img_idxs']])
             poses[..., :3] = dR @ poses[..., :3]
             poses[..., 3] += self.dT[batch['img_idxs']]
@@ -101,6 +101,7 @@ class NeRFSystem(LightningModule):
 
     def setup(self, stage):
         dataset = dataset_dict[self.hparams.dataset_name]
+        # print()
         kwargs = {'root_dir': self.hparams.root_dir,
                   'downsample': self.hparams.downsample}
         self.train_dataset = dataset(split=self.hparams.split, **kwargs)
@@ -115,6 +116,7 @@ class NeRFSystem(LightningModule):
         self.register_buffer('poses', self.train_dataset.poses.to(self.device))
 
         if self.hparams.optimize_ext:
+            print("optimizing extrinsics")
             N = len(self.train_dataset.poses)
             self.register_parameter('dR',
                 nn.Parameter(torch.zeros(N, 3, device=self.device)))
@@ -157,12 +159,19 @@ class NeRFSystem(LightningModule):
                                         self.train_dataset.img_wh)
 
     def training_step(self, batch, batch_nb, *args):
+        
         if self.global_step%self.update_interval == 0:
             self.model.update_density_grid(0.01*MAX_SAMPLES/3**0.5,
                                            warmup=self.global_step<self.warmup_steps,
                                            erode=self.hparams.dataset_name=='colmap')
 
         results = self(batch, split='train')
+        
+        # for k in results.keys():
+        #     # print()
+        #     print(k, " ", results[k].shape)
+            # print(k, " ", results[k].max(), " ", results[k].min())
+            
         loss_d = self.loss(results, batch)
         if self.hparams.use_exposure:
             zero_radiance = torch.zeros(1, 3, device=self.device)
@@ -174,6 +183,8 @@ class NeRFSystem(LightningModule):
 
         with torch.no_grad():
             self.train_psnr(results['rgb'], batch['rgb'])
+            
+            
         self.log('lr', self.net_opt.param_groups[0]['lr'])
         self.log('train/loss', loss)
         # ray marching samples per ray (occupied space on the ray)

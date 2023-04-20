@@ -91,6 +91,7 @@ def axisangle_to_R(v):
     skew_v2 = torch.cat([-v[:, 1:2], v[:, 0:1], zero], 1)
     skew_v = torch.stack([skew_v0, skew_v1, skew_v2], dim=1) # (B, 3, 3)
 
+    # v = v / norm_v[..., 0]
     norm_v = rearrange(torch.norm(v, dim=1)+1e-7, 'b -> b 1 1')
     eye = torch.eye(3, device=v.device)
     R = eye + (torch.sin(norm_v)/norm_v)*skew_v + \

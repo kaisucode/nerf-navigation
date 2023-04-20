@@ -40,6 +40,7 @@
 #include <cassert>
 #include <cstdint>
 #include <cstdio>
+// #include <iostream>
 
 #include <tiny-cuda-nn/gpu_matrix.h>
 
@@ -47,6 +48,8 @@ TCNN_NAMESPACE_BEGIN
 
 static constexpr float PI = 3.14159265358979323846f;
 static constexpr float SQRT2 = 1.41421356237309504880f;
+// static constexpr float SIGMA = 0.15F;
+
 
 __host__ __device__ inline float logistic(const float x) {
 	return 1.0f / (1.0f + expf(-x));
@@ -100,10 +103,14 @@ __host__ __device__ void warp_activation(Activation activation, const fragment_t
 			}
 			return;
 		case Activation::Gaussian:
+			// std::cout << result.x << std::endl;
 			TCNN_PRAGMA_UNROLL
 			for (int t=0; t < result.num_elements; t++) {
-				// exp(-x * x / (2 * 0.1 * 0.1)) for sigma = 0.1
-				result.x[t] = (T)(expf(-(float)frag.x[t] * (float)frag.x[t] / (2.0f * 0.1f * 0.1f)));
+				// exp(-x * x / (2 * 0.1 * 0.1)) for sigma_g = 0.1
+				float sigma_g = 0.15f;
+				// result.x[t] = (T)(expf(-fminf((float)frag.x[t] * (float)frag.x[t], 0.2f) / (2.0f * sigma_g * sigma_g)));
+				result.x[t] = (T)(expf(-(float)frag.x[t] * (float)frag.x[t] / (2.0f * sigma_g * sigma_g)));
+
 			}
 			return;
 		case Activation::Sine:
@@ -177,7 +184,10 @@ __host__ __device__ void warp_activation_backward_in(Activation activation, cons
 			TCNN_PRAGMA_UNROLL
 			for (int t=0; t < result.num_elements; t++) {
 				// exp(x * x / )
-				result.x[t] = frag.x[t] * (T)(-expf(-(float)forward_frag_in.x[t] * (float)forward_frag_in.x[t] / (2.0f * 0.1f * 0.1f)) * (float)forward_frag_in.x[t] / (0.1f * 0.1f));
+				float sigma_g = 0.15f;
+				// result.x[t] = frag.x[t] * (T)(-1.0f * expf(-fminf((float)forward_frag_in.x[t] * (float)forward_frag_in.x[t], 0.2f) / (2.0f * sigma_g * sigma_g)) * fmaxf(fminf((float)forward_frag_in.x[t], 0.45f), -0.45f) / (sigma_g * sigma_g));
+				result.x[t] = frag.x[t] * (T)(-1.0f * expf(-(float)forward_frag_in.x[t] * (float)forward_frag_in.x[t] / (2.0f * sigma_g * sigma_g)) * (float)forward_frag_in.x[t] / (sigma_g * sigma_g));
+
 			}
 			return;
 		case Activation::Sine:
@@ -254,8 +264,9 @@ __host__ __device__ void warp_activation_backward(Activation activation, const f
 		case Activation::Gaussian:
 			TCNN_PRAGMA_UNROLL
 			for (int t=0; t < result.num_elements; t++) {
-				// ff * sqrt(-2 * sigma**2 * ln(ff)) / (sigma**2) 
-				result.x[t] = frag.x[t] * (T)((float)forward_frag.x[t] * sqrtf(-2.0f * 0.1f * 0.1f * logf((float)forward_frag.x[t])) / (0.1f * 0.1f));
+				// ff * sqrt(-2 * sigma_g**2 * ln(ff)) / (sigma_g**2) 
+				float sigma_g = 0.15f;
+				result.x[t] = frag.x[t] * (T)(-1.0f * (float)forward_frag.x[t] * sqrtf(-2.0f * sigma_g * sigma_g * (logf((float)forward_frag.x[t] + 1e-6f))) / (sigma_g * sigma_g));
 			}
 			return;
 		case Activation::Sine:

@@ -87,6 +87,7 @@ class NSVFDataset(BaseDataset):
                 c2w = np.loadtxt(pose)[:3]
                 c2w[:, 3] -= self.shift
                 c2w[:, 3] /= 2*self.scale # to bound the scene inside [-0.5, 0.5]
+                c2w[:, 3] += 0.001 * np.random.normal(c2w[:, 3].shape)
                 self.poses += [c2w]
 
                 img = read_image(img_path, self.img_wh)
