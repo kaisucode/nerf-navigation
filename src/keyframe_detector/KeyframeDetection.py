@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 class KeyframeDetector():
     def __init__(self):
         # Initiate feature detector
-        self.detector = cv.SIFT_create(50)
+        self.detector = cv.SIFT_create(100)
         # self.detector = cv.ORB_create()
         self.matcher = cv.BFMatcher(cv.NORM_L2)
         # reference frame
@@ -17,7 +17,7 @@ class KeyframeDetector():
         self.num_keyframe = 0
         
         # keyframe detector constant
-        self.match_threshold = 20
+        self.match_threshold = 60
         pass
 
     def computeFeature(self, img_arr, output_name):
@@ -90,7 +90,10 @@ class KeyframeDetector():
         # keyframe detection
         save_name = "./keyframes/frame_" + str(frame_id) + ".jpg"
         # time_begin = time()
-        matched_feature = self.frameMatch(img_arr, self.ref_frame, save_name)
+        try:
+            matched_feature = self.frameMatch(img_arr, self.ref_frame, save_name)
+        except:
+            return False
         # print(time() - time_begin)
         detected = matched_feature < self.match_threshold 
         if detected:

@@ -7,6 +7,7 @@
 """Simple image display example."""
 
 import argparse
+import rospy
 import logging
 import sys
 import time
@@ -54,11 +55,11 @@ class SensorListener():
         self.initListener()
 
     def initListener(self): 
-    
+        rospy.init_node('sensors')
         # Start image capture process
         image_capture_thread = Thread(target=self.capture_images, daemon=True)
         #  image_capture_thread = Process(target=self.capture_images,
-                daemon=True)
+                # daemon=True)
         image_capture_thread.start()
 
         # Start odom capture process
@@ -69,7 +70,7 @@ class SensorListener():
 
     def capture_state(self): 
         while True:
-            print("in the state capture")
+            # print("in the state capture")
             robot_state_resp = self.robot_state_task.proto
             # start_time = time.time()
 
@@ -79,6 +80,7 @@ class SensorListener():
             vo_tform_robot = get_vision_tform_body(robot_state_resp.kinematic_state.transforms_snapshot)
 
             self.odom_pose = vo_tform_robot
+            # print("odom print: ", self.odom_pose)
             acquisition_time = robot_state_resp.kinematic_state.acquisition_timestamp
             self.time = acquisition_time.seconds + acquisition_time.nanos * 1e-9
 
@@ -93,7 +95,7 @@ class SensorListener():
 
     def capture_images(self): 
         while True:
-            print("in the image capture")
+            # print("in the image capture")
             get_im_resp = self.image_task.proto
             start_time = time.time()
             if not get_im_resp:

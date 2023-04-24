@@ -23,9 +23,10 @@ import rospy
 
 import cv2
 from keyframe_detector.SensorStreamSpotSdk import * 
+import time
 
-HOSTNAME = "gouger.rlab.cs.brown.edu"
-image_sources = ["hand_color_image", "hand_depth"] # sources for depth and rgb image
+HOSTNAME = "tusker.rlab.cs.brown.edu"
+image_sources = ["hand_color_image", "hand_depth_in_hand_color_frame"] # sources for depth and rgb image
 sensor_time_delay = 0/60.0
 LOGGER = logging.getLogger(__name__)
 
@@ -121,16 +122,70 @@ def main(argv):
     loop_hz = 60
     rate = rospy.Rate(loop_hz)
 
+    rgb_data = []
+    depth_data = []
+    odom_position_data = []
+    odom_orientation_data = []
+    timstamp_data = []
+
     # task begins
     frame_id = 0
     while not rospy.is_shutdown():
         if not sensors_listener.sensor_initialzed:
             continue
         # ---- keyframe detection ----
+        rgb = sensors_listener.rgb_image
+        depth = sensors_listener.depth_image
+        odom = sensors_listener.odom_pose
+        timstamp = sensors_listener.time
 
-        kfd.run(sensors_listener.rgb_image, frame_id)
-        print("length of the keyframe buffer", len(kfd.num_keyframe))
+        # bebug
+        # print("odom position" , odom.position.x)
+        # print("odom position datatype" , type(odom.position.x))
+        # print("odom rotation" , odom.rotation.w)
+        # print("odom rotation datatype" , type(odom.rotation.w))
+
+        # print(timstamp)
+
+        success = kfd.run(rgb, frame_id)
+
+        if success:
+            rgb_data.append(rgb)
+            depth_data.append(depth)
+            odom_position_data.append(
+                np.array([odom.position.x, odom.position.y, odom.position.z])
+                )
+            odom_orientation_data.append(
+                np.array([odom.rotation.w, odom.rotation.x, odom.rotation.y, odom.rotation.z])
+                )
+            timstamp_data.append(timstamp)
+
+
+        print("length of the keyframe buffer", kfd.num_keyframe)
         frame_id += 1
+    
+    
+    # write the data
+    all_rgb_data = np.array(rgb_data)
+    all_depth_data = np.array(depth_data)
+    all_odom_position_data = np.array(odom_position_data)
+    all_odom_orientation_data = np.array(odom_orientation_data)
+    all_timestamp_data = np.array(timstamp_data)
+
+
+    print("rgb shape: ", all_rgb_data.shape)
+    print("depth shape: ", all_depth_data.shape)
+    print("odom position shape: ", all_odom_position_data.shape)
+    print("odom orientation shape: ", all_odom_orientation_data.shape)
+    print("timestamp shape: ", all_timestamp_data.shape)
+    np.savez("./spot_data", 
+             all_rgb_data, 
+             all_depth_data, 
+             all_odom_position_data, 
+             all_odom_orientation_data, 
+             all_timestamp_data)
+
+
         # rate.sleep()
 
 
