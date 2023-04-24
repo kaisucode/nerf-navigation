@@ -1,19 +1,20 @@
 import numpy as np
 import cv2 as cv
 import matplotlib.pyplot as plt
-import os
-from SensorStream import * 
+# import os
+# from SensorStream import * 
 
 class KeyframeDetector():
     def __init__(self):
         # Initiate feature detector
-        self.detector = cv.SIFT_create()
+        self.detector = cv.SIFT_create(50)
         # self.detector = cv.ORB_create()
         self.matcher = cv.BFMatcher(cv.NORM_L2)
         # reference frame
         self.ref_frame = None
         # keyframe buffer
         self.keyframe_buffer = []
+        self.num_keyframe = 0
         
         # keyframe detector constant
         self.match_threshold = 20
@@ -27,7 +28,7 @@ class KeyframeDetector():
 
         # draw the feature
         img = cv.drawKeypoints(gray, kp , img_arr, flags=cv.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
-        cv.imwrite(output_name, img)
+        # cv.imwrite(output_name, img)
 
 
         pass
@@ -55,7 +56,7 @@ class KeyframeDetector():
                                  prev_gray, prev_kp, 
                                  good, None,
                                  **draw_params)
-        cv.imwrite("./test.jpg", match_img)
+        # cv.imwrite("./test.jpg", match_img)
 
         # RANSAC
         query_pts = np.float32([kp[m.queryIdx].pt for m in good]).reshape(-1,1,2)
@@ -81,42 +82,47 @@ class KeyframeDetector():
         return np.sum(matchesMask)
 
     def run(self, img_arr, frame_id):
+        # print(frame_id)
         # if the reference frame is not set, set it.
         if self.ref_frame is None:
-            self.keyframe_buffer.append(img_arr)
+            # self.keyframe_buffer.append(img_arr)
             self.ref_frame = img_arr
         # keyframe detection
-        save_name = "./keyframes/frame_" + frame_id + ".jpg"
+        save_name = "./keyframes/frame_" + str(frame_id) + ".jpg"
+        # time_begin = time()
         matched_feature = self.frameMatch(img_arr, self.ref_frame, save_name)
-        if matched_feature < self.match_threshold:
-            self.keyframe_buffer.append(img_arr)
+        # print(time() - time_begin)
+        detected = matched_feature < self.match_threshold 
+        if detected:
+            self.num_keyframe += 1
+            # self.keyframe_buffer.append(img_arr)
             self.ref_frame = img_arr
 
-        pass
+        return detected
 
     def readImage(self, file_name):
         img = cv.imread(file_name)
         return img
 
 
-if __name__ == "__main__":
-    # setting for the sensor listener
-    sensors_listener = SensorListener()
-    kfd = KeyframeDetector()
-    # task settings
-    loop_hz = 60
-    rate = rospy.Rate(loop_hz)
+# if __name__ == "__main__":
+#     # setting for the sensor listener
+#     sensors_listener = SensorListener()
+#     kfd = KeyframeDetector()
+#     # task settings
+#     loop_hz = 60
+#     rate = rospy.Rate(loop_hz)
     
-    # task begins
-    frame_id = 0
-    while not rospy.is_shutdown():
-        if not sensors_listener.sensor_initialzed:
-            continue
-        # ---- keyframe detection ----
-        kfd.run(sensors_listener.rgb_image, frame_id)
-        print("length of the keyframe buffer", len(kfd.keyframe_buffer))
-        frame_id += 1
-        rate.sleep()
+#     # task begins
+#     frame_id = 0
+#     while not rospy.is_shutdown():
+#         if not sensors_listener.sensor_initialzed:
+#             continue
+#         # ---- keyframe detection ----
+#         kfd.run(sensors_listener.rgb_image, frame_id)
+#         print("length of the keyframe buffer", len(kfd.keyframe_buffer))
+#         frame_id += 1
+#         rate.sleep()
 
     # print("Start...")
     # kfd = KeyframeDetector()

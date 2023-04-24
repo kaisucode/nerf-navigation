@@ -12,7 +12,14 @@ from bosdyn.client.robot_command import (RobotCommandBuilder, RobotCommandClient
 from bosdyn.client.robot_state import RobotStateClient
 from bosdyn.client.async_tasks import AsyncPeriodicQuery, AsyncTasks
 from bosdyn.client.image import ImageClient, build_image_request
+
+from bosdyn.api import gripper_camera_param_pb2, header_pb2
+from bosdyn.client.gripper_camera_param import GripperCameraParamClient
+
+
 import logging
+from keyframe_detector.KeyframeDetection import *
+import rospy
 
 import cv2
 from keyframe_detector.SensorStreamSpotSdk import * 
@@ -30,9 +37,9 @@ def _update_thread(async_task):
 class AsyncImage(AsyncPeriodicQuery):
     """Grab image."""
 
-    def __init__(self, image_client, image_sources):
+    def __init__(self, image_client, image_sources, loop_rate):
         # Period is set to be about 15 FPS
-        super(AsyncImage, self).__init__('images', image_client, LOGGER, period_sec=0.067)
+        super(AsyncImage, self).__init__('images', image_client, LOGGER, period_sec=1/loop_rate)
         self.image_sources = image_sources
 
     def _start_query(self):
@@ -41,15 +48,17 @@ class AsyncImage(AsyncPeriodicQuery):
 class AsyncRobotState(AsyncPeriodicQuery):
     """Grab robot state."""
 
-    def __init__(self, robot_state_client):
+    def __init__(self, robot_state_client, loop_rate):
         # period is set to be about the same rate as detections on the CORE AI
         super(AsyncRobotState, self).__init__('robot_state', robot_state_client, LOGGER,
-                                              period_sec=0.02)
+                                              period_sec=1/loop_rate)
 
     def _start_query(self):
         return self._client.get_robot_state_async()
 
 def main(argv): 
+    # define the loop rate
+    loop_rate = 60
 
     #####################################
     # Create robot object.
@@ -65,6 +74,16 @@ def main(argv):
     # Create the lease client.
     lease_client = robot.ensure_client(LeaseClient.default_service_name)
 
+    # camera param
+    # gripper_camera_param_client = robot.ensure_client(GripperCameraParamClient.default_service_name)
+    # camera_mode = gripper_camera_param_pb2.GripperCameraParams.MODE_640_480_120FPS_UYVY
+    # params = gripper_camera_param_pb2.GripperCameraParams(camera_mode=camera_mode)
+    # request = gripper_camera_param_pb2.GripperCameraParamRequest(params=params)
+    # response = gripper_camera_param_client.set_camera_params(request)
+    # if response.header.error and response.header.error.code != header_pb2.CommonError.CODE_OK:
+    #     print('Got an error:')
+    #     print(response.header.error)
+    
     # Setup clients for the robot
     # image client
     robot_image_client = robot.ensure_client(ImageClient.default_service_name)
@@ -74,8 +93,8 @@ def main(argv):
 
     # async image 
     print("begin tasks query")
-    image_task = AsyncImage(robot_image_client, image_sources)
-    robot_state_task = AsyncRobotState(robot_state_client)
+    image_task = AsyncImage(robot_image_client, image_sources, loop_rate)
+    robot_state_task = AsyncRobotState(robot_state_client, loop_rate)
     task_list = [image_task, robot_state_task]
     _async_tasks = AsyncTasks(task_list)
 
@@ -93,25 +112,47 @@ def main(argv):
     sensors_listener = SensorListener(robot, image_task, robot_state_task, sensor_time_delay)
     print("listener opened")
 
-    # enter main loop
-    while True: 
-        # robot_state_resp = robot_state_task.proto
-        # acquisition_time = robot_state_resp.kinematic_state.acquisition_timestamp
-        # time_temp = acquisition_time.seconds + acquisition_time.nanos * 1e-9
-        # print("time in the main: ", time_temp)
 
-        if not sensors_listener.sensor_initialzed: 
+    # ------------------- Start Task ------------------------
+    # init the keyframe detector
+    kfd = KeyframeDetector()
+
+    # task settings
+    loop_hz = 60
+    rate = rospy.Rate(loop_hz)
+
+    # task begins
+    frame_id = 0
+    while not rospy.is_shutdown():
+        if not sensors_listener.sensor_initialzed:
             continue
-        print("in the loop")
-        # ---- Show images ------
-        cv2.namedWindow('RGB', cv2.WINDOW_AUTOSIZE)
-        cv2.imshow('RGB', sensors_listener.rgb_image)
-        cv2.namedWindow('Depth', cv2.WINDOW_AUTOSIZE)
-        cv2.imshow('Depth', sensors_listener.depth_image)
-        Key = cv2.waitKey(50)
-        if Key == 27:
-            cv2.destroyAllWindows()
-            break
+        # ---- keyframe detection ----
+
+        kfd.run(sensors_listener.rgb_image, frame_id)
+        print("length of the keyframe buffer", len(kfd.num_keyframe))
+        frame_id += 1
+        # rate.sleep()
+
+
+    # # enter main loop
+    # while True: 
+    #     # robot_state_resp = robot_state_task.proto
+    #     # acquisition_time = robot_state_resp.kinematic_state.acquisition_timestamp
+    #     # time_temp = acquisition_time.seconds + acquisition_time.nanos * 1e-9
+    #     # print("time in the main: ", time_temp)
+
+    #     if not sensors_listener.sensor_initialzed: 
+    #         continue
+    #     print("in the loop")
+    #     # ---- Show images ------
+    #     cv2.namedWindow('RGB', cv2.WINDOW_AUTOSIZE)
+    #     cv2.imshow('RGB', sensors_listener.rgb_image)
+    #     cv2.namedWindow('Depth', cv2.WINDOW_AUTOSIZE)
+    #     cv2.imshow('Depth', sensors_listener.depth_image)
+    #     Key = cv2.waitKey(50)
+    #     if Key == 27:
+    #         cv2.destroyAllWindows()
+    #         break
 
 if __name__ == "__main__":
     if not main(sys.argv[1:]):
