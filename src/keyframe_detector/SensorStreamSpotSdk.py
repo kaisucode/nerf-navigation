@@ -10,7 +10,7 @@ import argparse
 import logging
 import sys
 import time
-from multiprocessing import Barrier, Process, Queue, Value
+#  from multiprocessing import Barrier, Process, Queue, Value
 from threading import BrokenBarrierError, Thread
 
 import cv2
@@ -56,12 +56,14 @@ class SensorListener():
     def initListener(self): 
     
         # Start image capture process
-        image_capture_thread = Process(target=self.capture_images,
+        image_capture_thread = Thread(target=self.capture_images, daemon=True)
+        #  image_capture_thread = Process(target=self.capture_images,
                 daemon=True)
         image_capture_thread.start()
 
         # Start odom capture process
-        state_capture_thread = Process(target=self.capture_state,
+        #  state_capture_thread = Process(target=self.capture_state,
+        state_capture_thread = Thread(target=self.capture_state,
                 daemon=True)
         state_capture_thread.start()
 
