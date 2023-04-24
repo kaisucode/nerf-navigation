@@ -85,7 +85,7 @@ def main(argv):
 
 
     ## pass image_task for SensorListener to access
-    sensors_listener = SensorListener(robot, image_task, sensor_time_delay)
+    sensors_listener = SensorListener(robot, image_task, robot_state_task, sensor_time_delay)
 
 
     # enter main loop

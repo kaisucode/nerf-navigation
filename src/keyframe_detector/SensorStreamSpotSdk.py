@@ -29,7 +29,7 @@ _LOGGER = logging.getLogger(__name__)
 
 class SensorListener():
 
-    def __init__(self, robot, image_task, time_delay):
+    def __init__(self, robot, image_task, robot_state_task, time_delay):
         # the video stream
         self.rgb_image = None
         self.depth_image = None
@@ -46,10 +46,11 @@ class SensorListener():
 
         self.robot = robot
         self.image_task = image_task
+        self.robot_state_task = robot_state_task
         self.time_delay = time_delay # substitute for time between capture
 
         # start listener
-        self.initListener(self.image_task)
+        self.initListener()
 
     def initListener(): 
 
@@ -59,9 +60,31 @@ class SensorListener():
                 daemon=True)
         image_capture_thread.start()
 
-        self.sensor_initialzed = True
+        # Start odom capture process
+        state_capture_thread = Process(target=capture_state,
+                args=(self.robot_state_task, self.time_delay),
+                daemon=True)
+        state_capture_thread.start()
 
-    def capture_images(image_task, sleep_between_capture): 
+    def capture_state(self, robot_state_task, sleep_between_capture): 
+        robot_state_resp = robot_state_task.proto
+        start_time = time.time()
+
+        if not robot_state_resp: 
+            continue
+
+        vo_tform_robot = get_vision_tform_body(robot_state_resp.kinematic_state.transforms_snapshot)
+
+        self.odom_pose = vo_tform_robot
+        self.time = start_time
+
+        if (self.rgb_image is not None) and \
+            (self.depth_image is not None) and \
+                (self.odom_pose is not None):
+                self.sensor_initialzed = True
+        time.sleep(sleep_between_capture)
+
+    def capture_images(self, image_task, sleep_between_capture): 
         get_im_resp = image_task.proto
         start_time = time.time()
         if not get_im_resp:
@@ -78,15 +101,10 @@ class SensorListener():
                 self.rgb_image = image
             self.time = image_time
 
-        #  if (self.rgb_image is not None) and \
-        #      (self.depth_image is not None) and \
-        #          (self.odom_linear is not None):
-        #          self.sensor_initialzed = True
-
         if (self.rgb_image is not None) and \
-                (self.depth_image is not None): 
-                    self.sensor_initialzed = True
-
+            (self.depth_image is not None) and \
+                (self.odom_pose is not None):
+                self.sensor_initialzed = True
         time.sleep(sleep_between_capture)
 
 
@@ -124,75 +142,4 @@ class SensorListener():
         #      img = ndimage.rotate(img, ROTATION_ANGLE[image.source.name])
 
         return img, extension
-
-    def reset_image_client(self):
-        """Recreate the ImageClient from the robot object."""
-        del self.robot.service_clients_by_name['image']
-        del self.robot.channels_by_authority['api.spot.robot']
-        return self.robot.ensure_client('image')
-
-        
-
-#  VALUE_FOR_Q_KEYSTROKE = 113
-#  VALUE_FOR_ESC_KEYSTROKE = 27
-
-#  ROTATION_ANGLE = {
-#      'back_fisheye_image': 0,
-#      'frontleft_fisheye_image': -78,
-#      'frontright_fisheye_image': -102,
-#      'left_fisheye_image': 0,
-#      'right_fisheye_image': 180
-#  }
-
-
-
-
-#  def main(argv):
-
-
-#      image_client = robot.ensure_client(IMAGE_SERVICE)
-#      requests = [
-#          build_image_request(source, quality_percent=JPEG_QUALITY_PERCENT)
-#          for source in self.image_sources
-#      ]
-
-#      for image_source in options.image_sources:
-#          cv2.namedWindow(image_source, cv2.WINDOW_NORMAL)
-#          if len(options.image_sources) > 1 or DISABLE_FULL_SCREEN:
-#              cv2.setWindowProperty(image_source, cv2.WND_PROP_AUTOSIZE, cv2.WINDOW_AUTOSIZE)
-#          else:
-#              cv2.setWindowProperty(image_source, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
-
-#      keystroke = None
-#      timeout_count_before_reset = 0
-#      while keystroke != VALUE_FOR_Q_KEYSTROKE and keystroke != VALUE_FOR_ESC_KEYSTROKE:
-#          try:
-#              images_future = image_client.get_image_async(requests, timeout=0.5)
-#              while not images_future.done():
-#                  keystroke = cv2.waitKey(25)
-#                  print(keystroke)
-#                  if keystroke == VALUE_FOR_ESC_KEYSTROKE or keystroke == VALUE_FOR_Q_KEYSTROKE:
-#                      sys.exit(1)
-#              images = images_future.result()
-#          except TimedOutError as time_err:
-#              if timeout_count_before_reset == 5:
-#                  # To attempt to handle bad comms and continue the live image stream, try recreating the
-#                  # image client after having an RPC timeout 5 times.
-#                  _LOGGER.info("Resetting image client after 5+ timeout errors.")
-#                  image_client = reset_image_client()
-#                  timeout_count_before_reset = 0
-#              else:
-#                  timeout_count_before_reset += 1
-#          except Exception as err:
-#              _LOGGER.warning(err)
-#              continue
-#          for i in range(len(images)):
-#              image, _ = image_to_opencv(images[i], AUTO_ROTATE)
-#              cv2.imshow(images[i].source.name, image)
-#          keystroke = cv2.waitKey(CAPTURE_DELAY)
-
-
-#  if __name__ == "__main__":
-#      if not main(sys.argv[1:]):
-#          sys.exit(1)
 
