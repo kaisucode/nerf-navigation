@@ -12,6 +12,7 @@ from bosdyn.client.robot_command import (RobotCommandBuilder, RobotCommandClient
 from bosdyn.client.robot_state import RobotStateClient
 from bosdyn.client.async_tasks import AsyncPeriodicQuery, AsyncTasks
 
+import cv2
 from keyframe_detector.SensorStreamSpotSdk import * 
 
 HOSTNAME = "gouger.rlab.cs.brown.edu"
@@ -83,9 +84,24 @@ def main(argv):
         time.sleep(0.1)
 
 
-    ## !! pass image_task for SensorListener to access
+    ## pass image_task for SensorListener to access
     sensors_listener = SensorListener(robot, image_task, sensor_time_delay)
 
+
+    # enter main loop
+    while True: 
+        if not sensors_listener.sensor_initialzed: 
+            continue
+
+        # ---- Show images ------
+        cv2.namedWindow('RGB', cv2.WINDOW_AUTOSIZE)
+        cv2.imshow('RGB', sensors_listener.rgb_image)
+        cv2.namedWindow('Depth', cv2.WINDOW_AUTOSIZE)
+        cv2.imshow('Depth', sensors_listener.depth_image)
+        Key = cv2.waitKey(50)
+        if Key == 27:
+            cv2.destroyAllWindows()
+            break
 
 if __name__ == "__main__":
     if not main(sys.argv[1:]):
