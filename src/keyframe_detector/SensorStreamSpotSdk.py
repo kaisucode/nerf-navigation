@@ -22,6 +22,7 @@ import bosdyn.client.util
 from bosdyn.api import image_pb2
 from bosdyn.client.image import ImageClient, build_image_request
 from bosdyn.client.time_sync import TimedOutError
+from bosdyn.client.frame_helpers import VISION_FRAME_NAME, get_vision_tform_body
 
 
 _LOGGER = logging.getLogger(__name__)
@@ -52,60 +53,69 @@ class SensorListener():
         # start listener
         self.initListener()
 
-    def initListener(): 
-
+    def initListener(self): 
+    
         # Start image capture process
-        image_capture_thread = Process(target=capture_images,
-                args=(self.image_task, self.time_delay),
+        image_capture_thread = Process(target=self.capture_images,
                 daemon=True)
         image_capture_thread.start()
 
         # Start odom capture process
-        state_capture_thread = Process(target=capture_state,
-                args=(self.robot_state_task, self.time_delay),
+        state_capture_thread = Process(target=self.capture_state,
                 daemon=True)
         state_capture_thread.start()
 
-    def capture_state(self, robot_state_task, sleep_between_capture): 
-        robot_state_resp = robot_state_task.proto
-        start_time = time.time()
+    def capture_state(self): 
+        while True:
+            print("in the state capture")
+            robot_state_resp = self.robot_state_task.proto
+            # start_time = time.time()
 
-        if not robot_state_resp: 
-            continue
+            if not robot_state_resp: 
+                return
 
-        vo_tform_robot = get_vision_tform_body(robot_state_resp.kinematic_state.transforms_snapshot)
+            vo_tform_robot = get_vision_tform_body(robot_state_resp.kinematic_state.transforms_snapshot)
 
-        self.odom_pose = vo_tform_robot
-        self.time = start_time
+            self.odom_pose = vo_tform_robot
+            acquisition_time = robot_state_resp.kinematic_state.acquisition_timestamp
+            self.time = acquisition_time.seconds + acquisition_time.nanos * 1e-9
 
-        if (self.rgb_image is not None) and \
-            (self.depth_image is not None) and \
-                (self.odom_pose is not None):
-                self.sensor_initialzed = True
-        time.sleep(sleep_between_capture)
+            # print("time in state: ", self.time)
 
-    def capture_images(self, image_task, sleep_between_capture): 
-        get_im_resp = image_task.proto
-        start_time = time.time()
-        if not get_im_resp:
-            continue
+            if (self.rgb_image is not None) and \
+                (self.depth_image is not None) and \
+                    (self.odom_pose is not None):
+                    self.sensor_initialzed = True
+            time.sleep(0.01)
+            # time.sleep(sleep_between_capture)
 
-        for im_resp in get_im_resp: 
-            image, _ = image_to_opencv(images[i], AUTO_ROTATE)
-            acquisition_time = im_resp.shot.acquisition_time
-            image_time = acquisition_time.seconds + acquisition_time.nanos * 1e-9
+    def capture_images(self): 
+        while True:
+            print("in the image capture")
+            get_im_resp = self.image_task.proto
+            start_time = time.time()
+            if not get_im_resp:
+                return
 
-            if img.source.image_type == image_pb2.ImageSource.IMAGE_TYPE_DEPTH: 
-                self.depth_image = image
-            else: 
-                self.rgb_image = image
-            self.time = image_time
+            for im_resp in get_im_resp: 
+                image, _ = self.image_to_opencv(im_resp)
+                acquisition_time = im_resp.shot.acquisition_time
+                image_time = acquisition_time.seconds + acquisition_time.nanos * 1e-9
 
-        if (self.rgb_image is not None) and \
-            (self.depth_image is not None) and \
-                (self.odom_pose is not None):
-                self.sensor_initialzed = True
-        time.sleep(sleep_between_capture)
+                if im_resp.source.image_type == image_pb2.ImageSource.IMAGE_TYPE_DEPTH: 
+                    self.depth_image = image
+                else: 
+                    self.rgb_image = image
+                self.time = image_time
+
+
+            if (self.rgb_image is not None) and \
+                (self.depth_image is not None) and \
+                    (self.odom_pose is not None):
+                    self.sensor_initialzed = True
+            # time.sleep(sleep_between_capture)
+            time.sleep(0.01)
+
 
 
     def image_to_opencv(self, image, auto_rotate=True):

@@ -11,13 +11,16 @@ from bosdyn.client.robot_command import (RobotCommandBuilder, RobotCommandClient
                                          block_for_trajectory_cmd, blocking_stand)
 from bosdyn.client.robot_state import RobotStateClient
 from bosdyn.client.async_tasks import AsyncPeriodicQuery, AsyncTasks
+from bosdyn.client.image import ImageClient, build_image_request
+import logging
 
 import cv2
 from keyframe_detector.SensorStreamSpotSdk import * 
 
 HOSTNAME = "gouger.rlab.cs.brown.edu"
 image_sources = ["hand_color_image", "hand_depth"] # sources for depth and rgb image
-sensor_time_delay = 1.0/60.0
+sensor_time_delay = 0/60.0
+LOGGER = logging.getLogger(__name__)
 
 def _update_thread(async_task):
     while True:
@@ -64,13 +67,14 @@ def main(argv):
 
     # Setup clients for the robot
     # image client
-    robot_image_client = robot.ensure_client(imageClient.default_service_name)
+    robot_image_client = robot.ensure_client(ImageClient.default_service_name)
     # motion client
     robot_state_client = robot.ensure_client(RobotStateClient.default_service_name)
     robot_command_client = robot.ensure_client(RobotCommandClient.default_service_name)
 
     # async image 
-    image_task = AsyncImage(image_client, image_sources)
+    print("begin tasks query")
+    image_task = AsyncImage(robot_image_client, image_sources)
     robot_state_task = AsyncRobotState(robot_state_client)
     task_list = [image_task, robot_state_task]
     _async_tasks = AsyncTasks(task_list)
@@ -82,17 +86,23 @@ def main(argv):
     # Wait for the first responses.
     while any(task.proto is None for task in task_list):
         time.sleep(0.1)
+    print("sensor ready")
 
 
     ## pass image_task for SensorListener to access
     sensors_listener = SensorListener(robot, image_task, robot_state_task, sensor_time_delay)
-
+    print("listener opened")
 
     # enter main loop
     while True: 
+        # robot_state_resp = robot_state_task.proto
+        # acquisition_time = robot_state_resp.kinematic_state.acquisition_timestamp
+        # time_temp = acquisition_time.seconds + acquisition_time.nanos * 1e-9
+        # print("time in the main: ", time_temp)
+
         if not sensors_listener.sensor_initialzed: 
             continue
-
+        print("in the loop")
         # ---- Show images ------
         cv2.namedWindow('RGB', cv2.WINDOW_AUTOSIZE)
         cv2.imshow('RGB', sensors_listener.rgb_image)
