@@ -2,6 +2,7 @@ import torch
 import json
 import numpy as np
 import os
+import matplotlib.pyplot as plt
 from tqdm import tqdm
 
 from .ray_utils import get_ray_directions
@@ -9,6 +10,7 @@ from .color_utils import read_image, preprocess_image
 
 from .base import BaseDataset
 from scipy.spatial.transform import Rotation
+import cv2
 
 
 
@@ -81,17 +83,19 @@ def center_poses(poses):
 class SpotDataset(BaseDataset):
     def __init__(self, root_dir, split='train', downsample=1.0, **kwargs):
         super().__init__(root_dir, split, downsample)
+        self.start_idx = 0
+        self.end_idx = 27
 
         self.read_intrinsics()
-
         self.read_data()
+
         # if kwargs.get('read_meta', True):
         #     self.read_meta(split)
 
     def read_intrinsics(self):
         
-        h = 480.0 * self.downsample
-        w = 640.0 * self.downsample
+        h = int(480.0 * self.downsample)
+        w = int(640.0 * self.downsample)
         fx = 538.64 * self.downsample
         fy = 521.76 * self.downsample
 
@@ -99,11 +103,18 @@ class SpotDataset(BaseDataset):
                         [0, fy, h/2],
                         [0,  0,   1]])
 
-        self.K = torch.FloatTensor(K)
-        self.directions = get_ray_directions(h, w, self.K)
+        self.K = K
+        # self.directions = get_ray_directions(h, w, self.K)
         self.img_wh = (w, h)
-        self.directions = get_ray_directions(h, w, self.K)
-        self.distortion_params = [0.10407162296473346, -0.17195930869305776]
+        # self.directions = get_ray_directions(h, w, self.K)
+
+        k1 =  0.10407162296473346
+        k2 = -0.17195930869305776
+        k3 =  0
+        k4 =  0
+        p1 = -0.001478066445083941
+        p2 = 0.000508493977714055
+        self.distortion_params = np.array([k1, k2, p1, p2])
         '''
         "camera_angle_x": 1.0721156444887512,
         "camera_angle_y": 0.8622471142946126,
@@ -139,35 +150,62 @@ class SpotDataset(BaseDataset):
         self.depths = []
 
         bottom = np.array([[0, 0, 0, 1.]])
-        for i in range(images.shape[0]):
+        for i in range(self.start_idx, self.end_idx):
             
-            im = images[i].astype(np.float32) / 255.0 # H, W, 3
+            im = cv2.cvtColor(images[i].astype(np.float32) / 255.0, cv2.COLOR_RGB2BGR)# H, W, 3
+            
+
+            new_K, roi = cv2.getOptimalNewCameraMatrix(self.K, self.distortion_params, self.img_wh, 1, self.img_wh)
+
+            im = cv2.undistort(im, self.K, self.distortion_params, None, new_K)
             t = ts[i] # 3
             q = qs[i] # 4
             d = depths[i] # H, W, 1
+            d = cv2.undistort(d, self.K, self.distortion_params, None, new_K)[..., None]
+            # print()
+
+            # print(im.shape, d.shape)
 
             R = Rotation.from_quat(np.array([q[1], q[2], q[3], q[0]])).as_matrix()
-            T = np.vstack([np.hstack(R, t[..., None]), bottom[None]]) # 4, 4
+            T = np.vstack([np.hstack([R, t[..., None]]), bottom]) # 4, 4
             
+
+            # print(T)
+            # print()
+            # plt.imshow(im)
+            # plt.show()
+
             #  ************** undistort images!!!!! *******
             im_rays = (preprocess_image(im, self.img_wh, True)) # (h  w), 3
+
+
             depth_rays = preprocess_image(d, self.img_wh, True) # (h w), 1
+            
+
 
             self.rays.append(im_rays)
             self.depths.append(depth_rays)
             self.poses.append(T)
 
         
+        self.K = torch.FloatTensor(new_K)
+        self.directions = torch.FloatTensor(get_ray_directions(self.img_wh[1], self.img_wh[0], self.K))
         # Center poses!
+        self.poses = torch.FloatTensor(np.stack(self.poses, 0)) # N, 4, 4
+        self.poses[:, :3, -1] = self.poses[:, :3, -1] / 20.0
 
-        self.poses = np.stack(self.poses, 0) # N, 4, 4
-        
-        self.rays = np.stack(self.rays, 0) # N, (h w), c
+        # print(self.poses[:, :3, -1].min(), self.poses[:, :3, -1].max())
+        self.rays = torch.FloatTensor(np.stack(self.rays, 0)) # N, (h w), c
+        self.depths = torch.FloatTensor(np.stack(self.depths, 0).astype(np.float32)) #
         # Convert to torch
 
+        # print("done")
 
 
 
 
 if __name__== "__main__":
+
+    root_dir = "/home/rahul/Education/Brown/1_sem2/CSCI2952-O/Project/data"
+    dataloader = SpotDataset(root_dir, split = "train", downsample = 1.0)
     pass
