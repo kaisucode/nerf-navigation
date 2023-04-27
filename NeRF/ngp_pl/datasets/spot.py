@@ -84,7 +84,7 @@ class SpotDataset(BaseDataset):
     def __init__(self, root_dir, split='train', downsample=1.0, **kwargs):
         super().__init__(root_dir, split, downsample)
         self.start_idx = 0
-        self.end_idx = 200
+        self.end_idx = 25
 
         self.read_intrinsics()
         self.read_data()
@@ -167,10 +167,10 @@ class SpotDataset(BaseDataset):
             # print(im.shape, d.shape)
 
             R = Rotation.from_quat(np.array([q[1], q[2], q[3], q[0]])).as_matrix()
-            T = np.vstack([np.hstack([R, t[..., None]]), bottom]) # 4, 4
+            T = np.linalg.inv(np.vstack([np.hstack([R, t[..., None]]), bottom])) # 4, 4
             
 
-            # print(T)
+            #print(T)
             # print()
             # plt.imshow(im)
             # plt.show()
@@ -194,7 +194,7 @@ class SpotDataset(BaseDataset):
         self.directions = torch.FloatTensor(get_ray_directions(self.img_wh[1], self.img_wh[0], self.K))
         # Center poses!
         self.poses = torch.FloatTensor(np.stack(self.poses, 0)[:, :3]) # N, 4, 4
-        self.poses[:, :3, -1] = self.poses[:, :3, -1] / 20.0
+        self.poses[:, :3, -1] = self.poses[:, :3, -1] / 12.0
 
         # print(self.poses[:, :3, -1].min(), self.poses[:, :3, -1].max())
         self.rays = torch.FloatTensor(np.stack(self.rays, 0)) # N, (h w), c
