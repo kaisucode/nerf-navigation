@@ -84,7 +84,7 @@ class SpotDataset(BaseDataset):
     def __init__(self, root_dir, split='train', downsample=1.0, **kwargs):
         super().__init__(root_dir, split, downsample)
         self.start_idx = 0
-        self.end_idx = 27
+        self.end_idx = 200
 
         self.read_intrinsics()
         self.read_data()
@@ -157,7 +157,7 @@ class SpotDataset(BaseDataset):
 
             new_K, roi = cv2.getOptimalNewCameraMatrix(self.K, self.distortion_params, self.img_wh, 1, self.img_wh)
 
-            im = cv2.undistort(im, self.K, self.distortion_params, None, new_K)
+            # im = cv2.undistort(im, self.K, self.distortion_params, None, new_K)
             t = ts[i] # 3
             q = qs[i] # 4
             d = depths[i] # H, W, 1
@@ -188,15 +188,19 @@ class SpotDataset(BaseDataset):
             self.poses.append(T)
 
         
-        self.K = torch.FloatTensor(new_K)
+        # self.K = torch.FloatTensor(new_K)
+        self.K = torch.FloatTensor(self.K)
+
         self.directions = torch.FloatTensor(get_ray_directions(self.img_wh[1], self.img_wh[0], self.K))
         # Center poses!
-        self.poses = torch.FloatTensor(np.stack(self.poses, 0)) # N, 4, 4
+        self.poses = torch.FloatTensor(np.stack(self.poses, 0)[:, :3]) # N, 4, 4
         self.poses[:, :3, -1] = self.poses[:, :3, -1] / 20.0
 
         # print(self.poses[:, :3, -1].min(), self.poses[:, :3, -1].max())
         self.rays = torch.FloatTensor(np.stack(self.rays, 0)) # N, (h w), c
         self.depths = torch.FloatTensor(np.stack(self.depths, 0).astype(np.float32)) #
+        print(self.poses.shape, self.rays.shape, "dimensions")
+        print(self.rays.max(), self.rays.min())
         # Convert to torch
 
         # print("done")

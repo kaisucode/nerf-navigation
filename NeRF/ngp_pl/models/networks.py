@@ -10,7 +10,7 @@ from .rendering import NEAR_DISTANCE
 
 
 class NGP(nn.Module):
-    def __init__(self, scale, rgb_act='Sigmoid'):
+    def __init__(self, scale, rgb_act='Gaussian'):
         super().__init__()
 
         self.rgb_act = rgb_act
@@ -64,15 +64,26 @@ class NGP(nn.Module):
                 },
             )
 
+        #     tcnn.Network(
+        #         n_input_dims=3, n_output_dims=16,
+        #         network_config={
+        #             "otype": "FullyFusedMLP",
+        #             "activation": "ReLU",
+        #             "output_activation": "None",
+        #             "n_neurons": 16,
+        #             "n_hidden_layers": 2,
+        #         }
+        #     )
+            
         self.rgb_net = \
             tcnn.Network(
                 n_input_dims=32, n_output_dims=3,
                 network_config={
                     "otype": "FullyFusedMLP",
-                    "activation": "ReLU",
+                    "activation": "LeakyReLU",
                     "output_activation": self.rgb_act,
-                    "n_neurons": 16,
-                    "n_hidden_layers": 4,
+                    "n_neurons": 64,
+                    "n_hidden_layers": 2,
                 }
             )
 

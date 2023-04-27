@@ -7,7 +7,7 @@ def get_opts():
     parser.add_argument('--root_dir', type=str, required=True,
                         help='root directory of dataset')
     parser.add_argument('--dataset_name', type=str, default='nsvf',
-                        choices=['nerf', 'nsvf', 'colmap', 'nerfpp', 'rtmv'],
+                        choices=['nerf', 'nsvf', 'colmap', 'nerfpp', 'rtmv', "spot"],
                         help='which dataset to train/test')
     parser.add_argument('--split', type=str, default='train',
                         choices=['train', 'trainval', 'trainvaltest'],
@@ -29,7 +29,7 @@ def get_opts():
                         ''')
 
     # training options
-    parser.add_argument('--batch_size', type=int, default=12000,
+    parser.add_argument('--batch_size', type=int, default=8192,
                         help='number of rays in a batch')
     parser.add_argument('--ray_sampling_strategy', type=str, default='all_images',
                         choices=['all_images', 'same_image'],

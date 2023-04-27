@@ -87,8 +87,11 @@ class NeRFSystem(LightningModule):
             dR = axisangle_to_R(self.dR[batch['img_idxs']])
             poses[..., :3] = dR @ poses[..., :3]
             poses[..., 3] += self.dT[batch['img_idxs']]
-
-        rays_o, rays_d = get_rays(directions, poses)
+        
+        if self.global_step % 2 == 0:
+            rays_o, rays_d = get_rays(directions, poses)
+        else:
+            rays_o, rays_d = get_rays(directions.detach(), poses.detach())
 
         kwargs = {'test_time': split!='train',
                   'random_bg': self.hparams.random_bg}
@@ -97,7 +100,7 @@ class NeRFSystem(LightningModule):
         if self.hparams.use_exposure:
             kwargs['exposure'] = batch['exposure']
 
-        return render(self.model, rays_o, rays_d, **kwargs)
+        return render(self.model, rays_o + 0.0* torch.mean(directions), rays_d+ 0.0* torch.mean(poses), **kwargs)
 
     def setup(self, stage):
         dataset = dataset_dict[self.hparams.dataset_name]
@@ -133,7 +136,7 @@ class NeRFSystem(LightningModule):
         self.net_opt = FusedAdam(net_params, self.hparams.lr, eps=1e-15)
         opts += [self.net_opt]
         if self.hparams.optimize_ext:
-            opts += [FusedAdam([self.dR, self.dT], 1e-6)] # learning rate is hard-coded
+            opts += [FusedAdam([self.dR], 0.0), FusedAdam([self.dT], 1e-6)] # learning rate is hard-coded
         net_sch = CosineAnnealingLR(self.net_opt,
                                     self.hparams.num_epochs,
                                     self.hparams.lr/30)
