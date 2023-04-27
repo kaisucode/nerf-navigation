@@ -87,7 +87,7 @@ class NSVFDataset(BaseDataset):
                 c2w = np.loadtxt(pose)[:3]
                 c2w[:, 3] -= self.shift
                 c2w[:, 3] /= 2*self.scale # to bound the scene inside [-0.5, 0.5]
-                c2w[:, 3] += 0.001 * np.random.normal(c2w[:, 3].shape)
+                c2w[:, 3] += 0.001 * np.random.normal(0, 1, c2w[:, 3].shape)
                 self.poses += [c2w]
 
                 img = read_image(img_path, self.img_wh)
@@ -98,4 +98,8 @@ class NSVFDataset(BaseDataset):
                 self.rays += [img]
 
             self.rays = torch.FloatTensor(np.stack(self.rays)) # (N_images, hw, ?)
+        
+        
         self.poses = torch.FloatTensor(self.poses) # (N_images, 3, 4)
+        print(self.poses.shape, self.rays.shape, "dimensions")
+        print(self.rays.max(), self.rays.min())

@@ -107,7 +107,7 @@ __host__ __device__ void warp_activation(Activation activation, const fragment_t
 			TCNN_PRAGMA_UNROLL
 			for (int t=0; t < result.num_elements; t++) {
 				// exp(-x * x / (2 * 0.1 * 0.1)) for sigma_g = 0.1
-				float sigma_g = 0.15f;
+				float sigma_g = 10.0f;
 				// result.x[t] = (T)(expf(-fminf((float)frag.x[t] * (float)frag.x[t], 0.2f) / (2.0f * sigma_g * sigma_g)));
 				result.x[t] = (T)(expf(-(float)frag.x[t] * (float)frag.x[t] / (2.0f * sigma_g * sigma_g)));
 
@@ -184,7 +184,7 @@ __host__ __device__ void warp_activation_backward_in(Activation activation, cons
 			TCNN_PRAGMA_UNROLL
 			for (int t=0; t < result.num_elements; t++) {
 				// exp(x * x / )
-				float sigma_g = 0.15f;
+				float sigma_g = 10.0f;
 				// result.x[t] = frag.x[t] * (T)(-1.0f * expf(-fminf((float)forward_frag_in.x[t] * (float)forward_frag_in.x[t], 0.2f) / (2.0f * sigma_g * sigma_g)) * fmaxf(fminf((float)forward_frag_in.x[t], 0.45f), -0.45f) / (sigma_g * sigma_g));
 				result.x[t] = frag.x[t] * (T)(-1.0f * expf(-(float)forward_frag_in.x[t] * (float)forward_frag_in.x[t] / (2.0f * sigma_g * sigma_g)) * (float)forward_frag_in.x[t] / (sigma_g * sigma_g));
 
@@ -265,8 +265,9 @@ __host__ __device__ void warp_activation_backward(Activation activation, const f
 			TCNN_PRAGMA_UNROLL
 			for (int t=0; t < result.num_elements; t++) {
 				// ff * sqrt(-2 * sigma_g**2 * ln(ff)) / (sigma_g**2) 
-				float sigma_g = 0.15f;
+				float sigma_g = 10.0f;
 				result.x[t] = frag.x[t] * (T)(-1.0f * (float)forward_frag.x[t] * sqrtf(-2.0f * sigma_g * sigma_g * (logf((float)forward_frag.x[t] + 1e-6f))) / (sigma_g * sigma_g));
+				
 			}
 			return;
 		case Activation::Sine:
