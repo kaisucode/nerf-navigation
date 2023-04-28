@@ -77,13 +77,13 @@ class SensorListener():
             if not robot_state_resp: 
                 return
 
-            vo_tform_robot = get_vision_tform_body(robot_state_resp.kinematic_state.transforms_snapshot) * get_a_tform_b(robot_state_resp.kinematic_state.transforms_snapshot, "body", "hand")
+            vision_tform_hand = get_vision_tform_body(robot_state_resp.kinematic_state.transforms_snapshot) * get_a_tform_b(robot_state_resp.kinematic_state.transforms_snapshot, "body", "hand")
 
             # print(robot_state_resp.kinematic_state.transforms_snapshot)
-            print("body to dock: ", get_vision_tform_body(robot_state_resp.kinematic_state.transforms_snapshot))
-            print("hand to dock**: ", get_vision_tform_body(robot_state_resp.kinematic_state.transforms_snapshot) * get_a_tform_b(robot_state_resp.kinematic_state.transforms_snapshot, "body", "hand"))
+            # print("body to dock: ", get_vision_tform_body(robot_state_resp.kinematic_state.transforms_snapshot))
+            # print("hand to dock**: ", get_vision_tform_body(robot_state_resp.kinematic_state.transforms_snapshot) * get_a_tform_b(robot_state_resp.kinematic_state.transforms_snapshot, "body", "hand"))
 
-            self.odom_pose = vo_tform_robot
+            self.odom_pose = vision_tform_hand
             # print("odom print: ", self.odom_pose)
             acquisition_time = robot_state_resp.kinematic_state.acquisition_timestamp
             self.time = acquisition_time.seconds + acquisition_time.nanos * 1e-9
