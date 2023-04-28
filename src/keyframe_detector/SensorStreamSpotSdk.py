@@ -23,7 +23,7 @@ import bosdyn.client.util
 from bosdyn.api import image_pb2
 from bosdyn.client.image import ImageClient, build_image_request
 from bosdyn.client.time_sync import TimedOutError
-from bosdyn.client.frame_helpers import VISION_FRAME_NAME, get_vision_tform_body
+from bosdyn.client.frame_helpers import VISION_FRAME_NAME, get_vision_tform_body, get_a_tform_b
 
 
 _LOGGER = logging.getLogger(__name__)
@@ -77,7 +77,11 @@ class SensorListener():
             if not robot_state_resp: 
                 return
 
-            vo_tform_robot = get_vision_tform_body(robot_state_resp.kinematic_state.transforms_snapshot)
+            vo_tform_robot = get_vision_tform_body(robot_state_resp.kinematic_state.transforms_snapshot) * get_a_tform_b(robot_state_resp.kinematic_state.transforms_snapshot, "body", "hand")
+
+            # print(robot_state_resp.kinematic_state.transforms_snapshot)
+            print("body to dock: ", get_vision_tform_body(robot_state_resp.kinematic_state.transforms_snapshot))
+            print("hand to dock**: ", get_vision_tform_body(robot_state_resp.kinematic_state.transforms_snapshot) * get_a_tform_b(robot_state_resp.kinematic_state.transforms_snapshot, "body", "hand"))
 
             self.odom_pose = vo_tform_robot
             # print("odom print: ", self.odom_pose)
