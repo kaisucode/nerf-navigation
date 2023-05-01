@@ -46,7 +46,7 @@ def get_opts():
     # experimental training options
     parser.add_argument('--optimize_ext', action='store_true', default=False,
                         help='whether to optimize extrinsics')
-    parser.add_argument('--random_bg', action='store_true', default=False,
+    parser.add_argument('--random_bg', action='store_true', default=True,
                         help='''whether to train with random bg color (real scene only)
                         to avoid objects with black color to be predicted as transparent
                         ''')

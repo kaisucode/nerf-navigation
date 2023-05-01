@@ -88,7 +88,7 @@ class NeRFSystem(LightningModule):
             poses[..., :3] = dR @ poses[..., :3]
             poses[..., 3] += self.dT[batch['img_idxs']]
         
-        if self.global_step % 2 == 0:
+        if self.global_step % 20 == 0:
             rays_o, rays_d = get_rays(directions, poses)
         else:
             rays_o, rays_d = get_rays(directions.detach(), poses.detach())
