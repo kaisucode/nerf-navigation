@@ -5,7 +5,7 @@ import os
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 
-from .ray_utils import get_ray_directions
+from .ray_utils import get_ray_directions, rotateAxis, translateMatrix
 from .color_utils import read_image, preprocess_image
 
 from .base import BaseDataset
@@ -139,6 +139,11 @@ class SpotDataset(BaseDataset):
         self.root_dir = os.path.join(self.root_dir, "") 
         self.dataset_array = np.load(self.root_dir + "spot_data.npz")
 
+        # x- front, y-left, z-up
+
+        frame_change = rotateAxis(-90, 2) @ rotateAxis(-90, 0)
+
+
         images = self.dataset_array["arr_0"]
         depths = self.dataset_array["arr_1"]
         ts = self.dataset_array["arr_2"]
@@ -167,11 +172,16 @@ class SpotDataset(BaseDataset):
             # print(im.shape, d.shape)
 
             R = Rotation.from_quat(np.array([q[1], q[2], q[3], q[0]])).as_matrix()
-            T = np.linalg.inv(np.vstack([np.hstack([R, t[..., None]]), bottom])) # 4, 4
+            #T = np.linalg.inv(np.vstack([np.hstack([R, t[..., None]]), bottom])) # 4, 4
             
 
             #print(T)
             # print()
+            T = (np.vstack([np.hstack([R, t[..., None]]), bottom])) @ frame_change # 4, 4
+            
+
+            #print(T)
+            #print()
             # plt.imshow(im)
             # plt.show()
 

@@ -214,3 +214,55 @@ def create_spheric_poses(radius, mean_h, n_poses=120):
     for th in np.linspace(0, 2*np.pi, n_poses+1)[:-1]:
         spheric_poses += [spheric_pose(th, -np.pi/12, radius)]
     return np.stack(spheric_poses, 0)
+
+
+
+def rotateAxis(degrees, axis):
+    '''
+    Function to rotate around given axis
+    Input:
+        degrees - scalar - Angle in degrees
+        
+        axis - scalar - options:
+            0 - around x axis
+            1 - around y axis
+            2 - around z axis  
+    
+    Returns:
+        Homogeneous rotation matrix
+    '''
+
+    radians = np.radians(degrees)
+
+    if axis == 2: # z - axis
+
+        rotation_mat = np.array([[np.cos(radians), -np.sin(radians),           0,          0],
+                                 [np.sin(radians),  np.cos(radians),           0,          0],
+                                 [              0,                0,           1,          0],
+                                 [              0,                0,           0,          1]])
+
+    elif axis == 1: # y - axis
+
+        rotation_mat = np.array([[np.cos(radians),                0,  np.sin(radians),          0],
+                                 [              0,                1,                0,          0],
+                                 [-np.sin(radians),               0, np.cos(radians),          0],
+                                 [              0,                0,                0,          1]])
+
+    elif axis == 0: # x - axis
+
+
+        rotation_mat = np.array([[             1,                0,                0,          0],
+                                [              0,  np.cos(radians), -np.sin(radians),          0],
+                                [              0,  np.sin(radians),  np.cos(radians),          0], 
+                                [              0,                0,                0,          1]])
+    
+    return rotation_mat
+
+def translateMatrix(x, y, z):
+    
+    translation_matrix = np.eye(4)
+    translation_matrix[0,3] += x
+    translation_matrix[1,3] += y
+    translation_matrix[2,3] += z
+
+    return translation_matrix
