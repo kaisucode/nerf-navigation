@@ -104,7 +104,7 @@ class BRICSDataset(BaseDataset):
        
         if len(self.rays)>0:
             self.rays = torch.FloatTensor(np.stack(self.rays)) # (N_images, hw, ?)
-        self.poses = torch.FloatTensor(self.poses) # (N_images, 3, 4)
+        self.poses = torch.FloatTensor(np.array(self.poses)) # (N_images, 3, 4)
 
 
 if __name__=="__main__":
