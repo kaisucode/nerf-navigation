@@ -11,12 +11,38 @@ from .color_utils import read_image, preprocess_image
 from .base import BaseDataset
 from scipy.spatial.transform import Rotation
 import cv2
+import open3d as o3d
 
 
 
 def normalize(v):
     """Normalize a vector."""
     return v/np.linalg.norm(v)
+
+
+def visualize_poses(poses):
+    """_summary_
+
+    Args:
+        poses (_type_): N x 4 x 4 - w2c frame
+    """
+    
+
+    origin = np.array([0.0, 0.0, 0.0, 1.0])[..., None] # 4, 1
+    mesh_list = []
+    for p_idx in range(poses.shape[0]):
+        cam_pose = poses[p_idx] @ origin
+
+        mesh = o3d.geometry.TriangleMesh.create_coordinate_frame(size = 1.0 / 20.0)
+        mesh.rotate(poses[p_idx, :3, :3])
+        mesh.translate(cam_pose[:3, -1])
+        mesh_list.append(mesh)
+    
+    o3d.visualization.draw_geometries(mesh_list)
+
+
+
+    
 
 
 def average_poses(poses):
@@ -80,11 +106,37 @@ def center_poses(poses):
 
     return poses_centered, pose_avg
 
+
+def debug_poses(data_path, start_idx = 0, end_idx = 20, scale = 20.0):
+
+    dataset_array = np.load(data_path)
+
+    ts = dataset_array["arr_2"]
+    qs = dataset_array["arr_3"]
+
+    frame_change = rotateAxis(-90, 2) @ rotateAxis(-90, 0)
+    poses = []
+    bottom = np.array([[0, 0, 0, 1.]])
+    for i in range(start_idx, end_idx):
+
+
+        t = ts[i] # 3
+        q = qs[i] # 4
+        R = Rotation.from_quat(np.array([q[1], q[2], q[3], q[0]])).as_matrix()
+        T = np.vstack([np.hstack([R, t[..., None]]), bottom]) @ frame_change # 4, 4 
+
+        poses.append(T)
+
+    poses = (np.stack(poses, 0)[:, :3]) # N, 4, 4
+    poses[:, :3, -1] = poses[:, :3, -1] / scale
+
+    visualize_poses(poses)
+
 class SpotDataset(BaseDataset):
     def __init__(self, root_dir, split='train', downsample=1.0, **kwargs):
         super().__init__(root_dir, split, downsample)
         self.start_idx = 0
-        self.end_idx = 200
+        self.end_idx = 20
 
         self.read_intrinsics()
         self.read_data()
@@ -136,12 +188,12 @@ class SpotDataset(BaseDataset):
 
 
     def read_data(self):
-        self.root_dir = os.path.join(self.root_dir, "") 
-        self.dataset_array = np.load(self.root_dir + "spot_data.npz")
+        # self.root_dir = os.path.join(self.root_dir, "") 
+        self.dataset_array = np.load(self.root_dir)
 
         # x- left, y-front, z-down
 
-        frame_change = rotateAxis(180, 1) @ rotateAxis(-90, 0)
+        frame_change = rotateAxis(-90, 2) @ rotateAxis(-90, 0)
 
 
         images = self.dataset_array["arr_0"]
@@ -172,13 +224,13 @@ class SpotDataset(BaseDataset):
             # print(im.shape, d.shape)
 
             R = Rotation.from_quat(np.array([q[1], q[2], q[3], q[0]])).as_matrix()
-            T = frame_change @ np.vstack([np.hstack([R, t[..., None]]), bottom]) # 4, 4
+            T = np.vstack([np.hstack([R, t[..., None]]), bottom]) @ frame_change # 4, 4
             
 
             print(T)
             print()
-            # plt.imshow(im)
-            # plt.show()
+            plt.imshow(im)
+            plt.show()
 
             #  ************** undistort images!!!!! *******
             im_rays = (preprocess_image(im, self.img_wh, True)) # (h  w), 3
@@ -201,6 +253,8 @@ class SpotDataset(BaseDataset):
         self.poses = torch.FloatTensor(np.stack(self.poses, 0)[:, :3]) # N, 4, 4
         self.poses[:, :3, -1] = self.poses[:, :3, -1] / 20.0
 
+        # visualize_poses(self.poses[:20])
+
         # print(self.poses[:, :3, -1].min(), self.poses[:, :3, -1].max())
         self.rays = torch.FloatTensor(np.stack(self.rays, 0)) # N, (h w), c
         self.depths = torch.FloatTensor(np.stack(self.depths, 0).astype(np.float32)) #
@@ -216,5 +270,11 @@ class SpotDataset(BaseDataset):
 if __name__== "__main__":
 
     root_dir = "/home/rahul/Education/Brown/1_sem2/CSCI2952-O/Project/data"
+    root_dir = "/home/rahul/Education/Brown/1_sem2/CSCI2952-O/Project/data/spot_data_numpy-20230430T235508Z-001/spot_data_numpy/04282023/spot_data_0.npz"
+
     dataloader = SpotDataset(root_dir, split = "train", downsample = 1.0)
+
+    # debug_poses("spot_data_0.npz", end_idx = 50)
+
+
     pass
