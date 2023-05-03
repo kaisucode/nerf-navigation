@@ -117,6 +117,8 @@ def debug_poses(data_path, start_idx = 0, end_idx = 20, scale = 20.0):
     frame_change = rotateAxis(-90, 2) @ rotateAxis(-90, 0)
     poses = []
     bottom = np.array([[0, 0, 0, 1.]])
+    if end_idx < 0.0:
+        end_idx = ts.shape[0]
     for i in range(start_idx, end_idx):
 
 
@@ -272,9 +274,9 @@ if __name__== "__main__":
     root_dir = "/home/rahul/Education/Brown/1_sem2/CSCI2952-O/Project/data"
     root_dir = "/home/rahul/Education/Brown/1_sem2/CSCI2952-O/Project/data/spot_data_numpy-20230430T235508Z-001/spot_data_numpy/04282023/spot_data_0.npz"
 
-    dataloader = SpotDataset(root_dir, split = "train", downsample = 1.0)
+    # dataloader = SpotDataset(root_dir, split = "train", downsample = 1.0)
 
-    # debug_poses("spot_data_0.npz", end_idx = 50)
+    debug_poses(root_dir, end_idx = -1)
 
 
     pass
