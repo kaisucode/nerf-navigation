@@ -18,7 +18,8 @@ class Node:
 
 
 class RRTStar:
-    def __init__(self, n, goal):
+    def __init__(self, n, start, goal):
+        self.path_found = False
         # robot info
         self.robot_height = 1  # TODO fix this value.
         self.robot_config_radius = 0.7
@@ -27,15 +28,16 @@ class RRTStar:
         # map info
         self.h = 20
         self.w = 20
-        self.sx = 0
-        self.sy = 0
+        # self.sx = 0
+        # self.sy = 0
+        self.start = start
 
-        self.x_min = np.array([self.sx, self.sy])
+        self.x_min = start
         self.c_min = 0
         # RRT_star tree
-        self.V_location = [np.array([self.sx, self.sy])]
+        self.V_location = [start]
         self.V_parent_loc = []
-        self.V_node = [Node(np.array([self.sx, self.sy]), self.c_min, None)]
+        self.V_node = [Node(start, self.c_min, None)]
         self.E = []
 
         self.dim = 2
@@ -60,13 +62,13 @@ class RRTStar:
         self.p = hnswlib.Index(space='l2', dim=self.dim)  # possible options are l2, cosine or ip
 
         # Initing index - the maximum number of elements should be known beforehand
-        self.p.init_index(max_elements=self.n+1, ef_construction=200, M=16)
+        self.p.init_index(max_elements=10*self.n+1, ef_construction=200, M=16)
 
         # Controlling the recall by setting ef:
         self.p.set_ef(50)  # ef should always be > k
 
         # add init pt & increase the pts_idx
-        self.p.add_items(np.array([self.sx,self.sy]), self.pts_idx)
+        self.p.add_items(start, self.pts_idx)
         self.pts_idx += 1
 
         # the goal pts
@@ -78,7 +80,7 @@ class RRTStar:
         # returns a state x that is sampled uniformly randomly from the domain
         collision = True
         while collision:
-            sample = np.random.uniform(self.sx - self.w/2, self.sx + self.w/2, 2)
+            sample = np.random.uniform(0 - self.w/2, 0 + self.w/2, 2)
             collision = self.is_in_collision(sample)
 
         return sample
@@ -213,6 +215,7 @@ class RRTStar:
             self.best_cost.append(np.inf)
         else:
             # add costs
+            self.path_found = True
             for element in X_near_goal:
                 clist.append(element.cost)
             best_idx = np.argmin(clist)
@@ -262,8 +265,8 @@ class RRTStar:
         ax.add_patch(rect4)
 
         # plot the start point and end point
-        plt.scatter(0,0,s=120,color="b",alpha=0.5)
-        plt.scatter(8,8,s=100,color="g",alpha=0.5)
+        plt.scatter(self.start[0], self.start[1], s=120, color="b", alpha=0.5)
+        plt.scatter(self.goal[0], self.goal[1], s=100, color="g", alpha=0.5)
 
         plt.title("map")
         plt.show()
@@ -274,25 +277,33 @@ class RRTStar:
         plt.ylabel("cost")
         plt.show()
         return path_mat
+
+    def run(self):
+        sample_iter = 0
+        while (not self.path_found) or (sample_iter < self.n):
+            x_rand_loc = self.sample()
+            self.x_nearest = self.nearest(x_rand_loc)
+
+            # judge if x_nearest could connect to x_rand
+            if not self.path_collision(self.x_nearest.location, x_rand_loc):
+                # find the near pts set in the circle
+                self.X_near = self.findNearSet(x_rand_loc, self.r)
+
+                # connect the x_rand with the tree
+                self.connect(x_rand_loc)
+                # rewire the tree
+                self.rewire()
+
+                self.getBestPath()
+
+            sample_iter += 1
+
 if __name__ == '__main__':
+    start = np.array([7, -3])
     goal = np.array([8, 8])
-    rrt_star = RRTStar(500, goal)
-    for i in tqdm.tqdm(range(rrt_star.n)):
-        # cur_idx_V = i+1
-        x_rand_loc = rrt_star.sample()
-        rrt_star.x_nearest = rrt_star.nearest(x_rand_loc)
+    rrt_star = RRTStar(100, start, goal)
 
-        # judge if x_nearest could connect to x_rand
-        if not rrt_star.path_collision(rrt_star.x_nearest.location, x_rand_loc):
-            # find the near pts set in the circle
-            rrt_star.X_near = rrt_star.findNearSet(x_rand_loc, rrt_star.r)
-
-            # connect the x_rand with the tree
-            rrt_star.connect(x_rand_loc)
-            # rewire the tree
-            rrt_star.rewire()
-
-            rrt_star.getBestPath()
+    rrt_star.run()
     # V_loc_mat = np.vstack(rrt_star.V_location)
     # V_par_mat = np.vstack(rrt_star.V_parent_loc)
     # plt.scatter(V_loc_mat[:, 0], V_loc_mat[:, 1], s=0.2)
