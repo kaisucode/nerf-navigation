@@ -47,7 +47,11 @@ class NeRFLoss(nn.Module):
     def forward(self, results, target, **kwargs):
         d = {}
         d['rgb'] = (results['rgb']-target['rgb'])**2
-
+        
+        if "depth" in target:
+            d["depth"] = torch.abs(results["depth"] - target["depth"]) * (target["depth"] > 0)
+            # print(torch.mean(torch.abs(results["depth"] - target["depth"])))
+            
         o = results['opacity']+1e-10
         # encourage opacity to be either 0 or 1 to avoid floater
         d['opacity'] = self.lambda_opacity*(-o*torch.log(o))

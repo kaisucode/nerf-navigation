@@ -107,30 +107,43 @@ def center_poses(poses):
     return poses_centered, pose_avg
 
 
-def debug_poses(data_path, start_idx = 0, end_idx = 20, scale = 20.0):
+def debug_poses(data_path, start_idx = 0, end_idx = 20, scale = 20.0, poses_in = None):
 
-    dataset_array = np.load(data_path)
 
-    ts = dataset_array["arr_2"]
-    qs = dataset_array["arr_3"]
+    if poses_in is None:
+        dataset_array = np.load(data_path)
+
+
+        ts = dataset_array["arr_2"]
+        qs = dataset_array["arr_3"]
 
     frame_change = rotateAxis(-90, 2) @ rotateAxis(-90, 0)
     poses = []
     bottom = np.array([[0, 0, 0, 1.]])
     if end_idx < 0.0:
-        end_idx = ts.shape[0]
+        if poses_in is None:
+            end_idx = ts.shape[0]
+        else:
+            end_idx = poses_in.shape[0]
+
+
+        
     for i in range(start_idx, end_idx):
+        
+        if poses_in is None:
 
-
-        t = ts[i] # 3
-        q = qs[i] # 4
-        R = Rotation.from_quat(np.array([q[1], q[2], q[3], q[0]])).as_matrix()
-        T = np.vstack([np.hstack([R, t[..., None]]), bottom]) @ frame_change # 4, 4 
+            t = ts[i] # 3
+            q = qs[i] # 4
+            R = Rotation.from_quat(np.array([q[1], q[2], q[3], q[0]])).as_matrix()
+            T = np.vstack([np.hstack([R, t[..., None]]), bottom]) @ frame_change # 4, 4 
+        else:
+            T = poses_in[i]
 
         poses.append(T)
 
     poses = (np.stack(poses, 0)[:, :3]) # N, 4, 4
     poses[:, :3, -1] = poses[:, :3, -1] / scale
+    print(poses.shape)
 
     visualize_poses(poses)
 
@@ -138,7 +151,7 @@ class SpotDataset(BaseDataset):
     def __init__(self, root_dir, split='train', downsample=1.0, **kwargs):
         super().__init__(root_dir, split, downsample)
         self.start_idx = 0
-        self.end_idx = 20
+        self.end_idx = -1
 
         self.read_intrinsics()
         self.read_data()
@@ -191,9 +204,11 @@ class SpotDataset(BaseDataset):
 
     def read_data(self):
         # self.root_dir = os.path.join(self.root_dir, "") 
+        
+        scale = 20.0
         self.dataset_array = np.load(self.root_dir)
 
-        # x- left, y-front, z-down
+        # x- front, y-left, z-up
 
         frame_change = rotateAxis(-90, 2) @ rotateAxis(-90, 0)
 
@@ -209,6 +224,9 @@ class SpotDataset(BaseDataset):
         self.depths = []
 
         bottom = np.array([[0, 0, 0, 1.]])
+        
+        if self.end_idx < 0:
+            self.end_idx = images.shape[0]
         for i in range(self.start_idx, self.end_idx):
             
             im = cv2.cvtColor(images[i].astype(np.float32) / 255.0, cv2.COLOR_RGB2BGR)# H, W, 3
@@ -219,8 +237,11 @@ class SpotDataset(BaseDataset):
             # im = cv2.undistort(im, self.K, self.distortion_params, None, new_K)
             t = ts[i] # 3
             q = qs[i] # 4
-            d = depths[i] # H, W, 1
+            d = (depths[i] / 1000.0) / scale # / (depths[i].max() / 1000.0 + 1e-6) # H, W, 1
+            # print(d.max())
             d = cv2.undistort(d, self.K, self.distortion_params, None, new_K)[..., None]
+            # print(d.max())
+            d_meters = d #(d / 1000.0) / (d.max() + 1e-6) # Converting to meters
             # print()
 
             # print(im.shape, d.shape)
@@ -229,16 +250,18 @@ class SpotDataset(BaseDataset):
             T = np.vstack([np.hstack([R, t[..., None]]), bottom]) @ frame_change # 4, 4
             
 
-            print(T)
-            print()
-            plt.imshow(im)
-            plt.show()
+            # print(T)
+            # print()
+            # plt.imshow(d_meters)
+            # plt.show()
 
             #  ************** undistort images!!!!! *******
             im_rays = (preprocess_image(im, self.img_wh, True)) # (h  w), 3
 
 
-            depth_rays = preprocess_image(d, self.img_wh, True) # (h w), 1
+            depth_rays = preprocess_image(d_meters, self.img_wh, True) # (h w), 1
+            
+            # depth_rays_meters
             
 
 
@@ -253,7 +276,7 @@ class SpotDataset(BaseDataset):
         self.directions = torch.FloatTensor(get_ray_directions(self.img_wh[1], self.img_wh[0], self.K))
         # Center poses!
         self.poses = torch.FloatTensor(np.stack(self.poses, 0)[:, :3]) # N, 4, 4
-        self.poses[:, :3, -1] = self.poses[:, :3, -1] / 20.0
+        self.poses[:, :3, -1] = self.poses[:, :3, -1] / scale
 
         # visualize_poses(self.poses[:20])
 
@@ -265,18 +288,52 @@ class SpotDataset(BaseDataset):
         # Convert to torch
 
         # print("done")
+        
+    def __len__(self):
+        if self.split.startswith('train'):
+            return 1000
+        return len(self.poses)
+
+    def __getitem__(self, idx):
+        if self.split.startswith('train'):
+            # training pose is retrieved in train.py
+            if self.ray_sampling_strategy == 'all_images': # randomly select images
+                img_idxs = np.random.choice(len(self.poses), self.batch_size)
+            elif self.ray_sampling_strategy == 'same_image': # randomly select ONE image
+                img_idxs = np.random.choice(len(self.poses), 1)[0]
+            # randomly select pixels
+            pix_idxs = np.random.choice(self.img_wh[0]*self.img_wh[1], self.batch_size)
+            rays = self.rays[img_idxs, pix_idxs]
+            depths = self.depths[img_idxs, pix_idxs]
+            sample = {'img_idxs': img_idxs, 'pix_idxs': pix_idxs,
+                      'rgb': rays[:, :3], "depth": depths}
+            if self.rays.shape[-1] == 4: # HDR-NeRF data
+                sample['exposure'] = rays[:, 3:]
+        else:
+            sample = {'pose': self.poses[idx], 'img_idxs': idx}
+            if len(self.rays)>0: # if ground truth available
+                rays = self.rays[idx]
+                sample['rgb'] = rays[:, :3]
+                if rays.shape[1] == 4: # HDR-NeRF data
+                    sample['exposure'] = rays[0, 3] # same exposure for all rays
+
+        return sample
 
 
 
 
 if __name__== "__main__":
 
-    root_dir = "/home/rahul/Education/Brown/1_sem2/CSCI2952-O/Project/data"
+    # root_dir = "/home/rahul/Education/Brown/1_sem2/CSCI2952-O/Project/data"
     root_dir = "/home/rahul/Education/Brown/1_sem2/CSCI2952-O/Project/data/spot_data_numpy-20230430T235508Z-001/spot_data_numpy/04282023/spot_data_0.npz"
 
     # dataloader = SpotDataset(root_dir, split = "train", downsample = 1.0)
+    # root_dir = "/home/rahul/Education/Brown/1_sem2/CSCI2952-O/Project/data"
+    # root_dir = "/home/rahul/Education/Brown/1_sem2/CSCI2952-O/Project/data/spot_data_numpy-20230430T235508Z-001/spot_data_numpy/04282023/spot_data_0.npz"
+    # root_dir = "/home/rahulsajnani/Education/Brown/1_sem2/52-O/project/data/04282023-20230501T003435Z-001/04282023/spot_data_0.npz"
+    # dataloader = SpotDataset(root_dir, split = "train", downsample = 1.0)
 
-    debug_poses(root_dir, end_idx = -1)
+    debug_poses(root_dir, end_idx = -1, scale = 5.0)
 
 
     pass

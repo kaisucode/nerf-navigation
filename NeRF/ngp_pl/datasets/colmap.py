@@ -157,3 +157,10 @@ class ColmapDataset(BaseDataset):
 
         self.rays = torch.stack(self.rays) # (N_images, hw, ?)
         self.poses = torch.FloatTensor(self.poses) # (N_images, 3, 4)
+        
+        
+if __name__ == "__main__":
+    
+    root_dir = "/home/rahulsajnani/Education/Brown/1_sem2/52-O/project/data/spot_data_colmap/spot_data_0/"
+    dataloader = ColmapDataset(root_dir=root_dir)
+    pass
