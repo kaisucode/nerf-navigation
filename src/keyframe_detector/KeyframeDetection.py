@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 class KeyframeDetector():
     def __init__(self):
         # Initiate feature detector
-        self.detector = cv.SIFT_create(100)
+        self.detector = cv.SIFT_create(50)
         # self.detector = cv.ORB_create()
         self.matcher = cv.BFMatcher(cv.NORM_L2)
         # reference frame
@@ -17,7 +17,7 @@ class KeyframeDetector():
         self.num_keyframe = 0
         
         # keyframe detector constant
-        self.match_threshold = 60
+        self.match_threshold = 40
         pass
 
     def computeFeature(self, img_arr, output_name):
@@ -48,15 +48,15 @@ class KeyframeDetector():
             if m.distance < 0.7 * n.distance:
                 good.append(m)
         
-        # cv.drawMatchesKnn expects list of lists as matches.
-        draw_params = dict(matchColor = (0,255,0), 
-                           singlePointColor = None
-        )
-        match_img = cv.drawMatches(gray, kp, 
-                                 prev_gray, prev_kp, 
-                                 good, None,
-                                 **draw_params)
-        # cv.imwrite("./test.jpg", match_img)
+        # # cv.drawMatchesKnn expects list of lists as matches.
+        # draw_params = dict(matchColor = (0,255,0), 
+        #                    singlePointColor = None
+        # )
+        # match_img = cv.drawMatches(gray, kp, 
+        #                          prev_gray, prev_kp, 
+        #                          good, None,
+        #                          **draw_params)
+        # # cv.imwrite("./test.jpg", match_img)
 
         # RANSAC
         query_pts = np.float32([kp[m.queryIdx].pt for m in good]).reshape(-1,1,2)
@@ -65,18 +65,18 @@ class KeyframeDetector():
         matchesMask = mask.ravel().tolist()
 
          
-        # render
-        if np.sum(matchesMask) < self.match_threshold:
-            draw_params = dict(matchColor = (0,255,0), 
-                            singlePointColor = None,
-                            matchesMask = matchesMask # draw only inliers
-            )
+        # # render
+        # if np.sum(matchesMask) < self.match_threshold:
+        #     draw_params = dict(matchColor = (0,255,0), 
+        #                     singlePointColor = None,
+        #                     matchesMask = matchesMask # draw only inliers
+        #     )
 
-            match_img = cv.drawMatches(gray, kp, 
-                                    prev_gray, prev_kp, 
-                                    good, None,
-                                    **draw_params)
-            cv.imwrite(save_name, match_img)
+        #     match_img = cv.drawMatches(gray, kp, 
+        #                             prev_gray, prev_kp, 
+        #                             good, None,
+        #                             **draw_params)
+        #     cv.imwrite(save_name, match_img)
 
 
         return np.sum(matchesMask)

@@ -25,7 +25,7 @@ import cv2
 from keyframe_detector.SensorStreamSpotSdk import * 
 import time
 
-HOSTNAME = "tusker.rlab.cs.brown.edu"
+HOSTNAME = "gouger.rlab.cs.brown.edu"
 image_sources = ["hand_color_image", "hand_depth_in_hand_color_frame"] # sources for depth and rgb image
 sensor_time_delay = 0/60.0
 LOGGER = logging.getLogger(__name__)
