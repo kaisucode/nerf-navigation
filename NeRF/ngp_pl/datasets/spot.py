@@ -189,6 +189,8 @@ class SpotDataset(BaseDataset):
 
     def read_data(self):
         # self.root_dir = os.path.join(self.root_dir, "") 
+        
+        scale = 20.0
         self.dataset_array = np.load(self.root_dir)
 
         # x- front, y-left, z-up
@@ -220,8 +222,11 @@ class SpotDataset(BaseDataset):
             # im = cv2.undistort(im, self.K, self.distortion_params, None, new_K)
             t = ts[i] # 3
             q = qs[i] # 4
-            d = depths[i] # H, W, 1
+            d = (depths[i] / 1000.0) / scale # / (depths[i].max() / 1000.0 + 1e-6) # H, W, 1
+            # print(d.max())
             d = cv2.undistort(d, self.K, self.distortion_params, None, new_K)[..., None]
+            # print(d.max())
+            d_meters = d #(d / 1000.0) / (d.max() + 1e-6) # Converting to meters
             # print()
 
             # print(im.shape, d.shape)
@@ -232,14 +237,16 @@ class SpotDataset(BaseDataset):
 
             # print(T)
             # print()
-            # plt.imshow(im)
+            # plt.imshow(d_meters)
             # plt.show()
 
             #  ************** undistort images!!!!! *******
             im_rays = (preprocess_image(im, self.img_wh, True)) # (h  w), 3
 
 
-            depth_rays = preprocess_image(d, self.img_wh, True) # (h w), 1
+            depth_rays = preprocess_image(d_meters, self.img_wh, True) # (h w), 1
+            
+            # depth_rays_meters
             
 
 
@@ -254,7 +261,7 @@ class SpotDataset(BaseDataset):
         self.directions = torch.FloatTensor(get_ray_directions(self.img_wh[1], self.img_wh[0], self.K))
         # Center poses!
         self.poses = torch.FloatTensor(np.stack(self.poses, 0)[:, :3]) # N, 4, 4
-        self.poses[:, :3, -1] = self.poses[:, :3, -1] / 40.0
+        self.poses[:, :3, -1] = self.poses[:, :3, -1] / scale
 
         # visualize_poses(self.poses[:20])
 
@@ -266,15 +273,45 @@ class SpotDataset(BaseDataset):
         # Convert to torch
 
         # print("done")
+        
+    def __len__(self):
+        if self.split.startswith('train'):
+            return 1000
+        return len(self.poses)
+
+    def __getitem__(self, idx):
+        if self.split.startswith('train'):
+            # training pose is retrieved in train.py
+            if self.ray_sampling_strategy == 'all_images': # randomly select images
+                img_idxs = np.random.choice(len(self.poses), self.batch_size)
+            elif self.ray_sampling_strategy == 'same_image': # randomly select ONE image
+                img_idxs = np.random.choice(len(self.poses), 1)[0]
+            # randomly select pixels
+            pix_idxs = np.random.choice(self.img_wh[0]*self.img_wh[1], self.batch_size)
+            rays = self.rays[img_idxs, pix_idxs]
+            depths = self.depths[img_idxs, pix_idxs]
+            sample = {'img_idxs': img_idxs, 'pix_idxs': pix_idxs,
+                      'rgb': rays[:, :3], "depth": depths}
+            if self.rays.shape[-1] == 4: # HDR-NeRF data
+                sample['exposure'] = rays[:, 3:]
+        else:
+            sample = {'pose': self.poses[idx], 'img_idxs': idx}
+            if len(self.rays)>0: # if ground truth available
+                rays = self.rays[idx]
+                sample['rgb'] = rays[:, :3]
+                if rays.shape[1] == 4: # HDR-NeRF data
+                    sample['exposure'] = rays[0, 3] # same exposure for all rays
+
+        return sample
 
 
 
 
 if __name__== "__main__":
 
-    root_dir = "/home/rahul/Education/Brown/1_sem2/CSCI2952-O/Project/data"
-    root_dir = "/home/rahul/Education/Brown/1_sem2/CSCI2952-O/Project/data/spot_data_numpy-20230430T235508Z-001/spot_data_numpy/04282023/spot_data_0.npz"
-
+    # root_dir = "/home/rahul/Education/Brown/1_sem2/CSCI2952-O/Project/data"
+    # root_dir = "/home/rahul/Education/Brown/1_sem2/CSCI2952-O/Project/data/spot_data_numpy-20230430T235508Z-001/spot_data_numpy/04282023/spot_data_0.npz"
+    root_dir = "/home/rahulsajnani/Education/Brown/1_sem2/52-O/project/data/04282023-20230501T003435Z-001/04282023/spot_data_0.npz"
     dataloader = SpotDataset(root_dir, split = "train", downsample = 1.0)
 
     # debug_poses("spot_data_0.npz", end_idx = 50)

@@ -182,7 +182,13 @@ class NeRFSystem(LightningModule):
                                     **{'exposure': torch.ones(1, 1, device=self.device)})
             loss_d['unit_exposure'] = \
                 0.5*(unit_exposure_rgb-self.train_dataset.unit_exposure_rgb)**2
-        loss = sum(lo.mean() for lo in loss_d.values())
+
+        loss = 0.0
+        for k in loss_d.keys():
+            if k == "depth":
+                loss = loss + (loss_d[k].sum() / (loss_d[k] > 0.0).sum())
+            else:
+                loss = loss + loss_d[k].mean()
 
         with torch.no_grad():
             self.train_psnr(results['rgb'], batch['rgb'])

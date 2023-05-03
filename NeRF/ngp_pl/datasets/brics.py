@@ -97,9 +97,9 @@ class BRICSDataset(BaseDataset):
         # center pos to [0, 0, 0]
         # and bound it by [-0.5, 0.5]
         for i in range(len(self.poses)):
-            self.poses[i][:, 3] -= np.array([-0.10901881, -0.06427684,  0.27593734])
+            # self.poses[i][:, 3] -= np.array([-0.10901881, -0.06427684,  0.27593734])
             #print(pos/len(self.poses))
-            self.poses[i][:, 3] /= 9.
+            self.poses[i][:, 3] /= 20.
             #print(self.poses[i][:, 3])        
        
         if len(self.rays)>0:
