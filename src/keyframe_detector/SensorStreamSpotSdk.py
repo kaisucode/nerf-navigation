@@ -7,10 +7,11 @@
 """Simple image display example."""
 
 import argparse
+import rospy
 import logging
 import sys
 import time
-from multiprocessing import Barrier, Process, Queue, Value
+#  from multiprocessing import Barrier, Process, Queue, Value
 from threading import BrokenBarrierError, Thread
 
 import cv2
@@ -22,7 +23,7 @@ import bosdyn.client.util
 from bosdyn.api import image_pb2
 from bosdyn.client.image import ImageClient, build_image_request
 from bosdyn.client.time_sync import TimedOutError
-from bosdyn.client.frame_helpers import VISION_FRAME_NAME, get_vision_tform_body
+from bosdyn.client.frame_helpers import VISION_FRAME_NAME, get_vision_tform_body, get_a_tform_b
 
 
 _LOGGER = logging.getLogger(__name__)
@@ -54,29 +55,36 @@ class SensorListener():
         self.initListener()
 
     def initListener(self): 
-    
+        rospy.init_node('sensors')
         # Start image capture process
-        image_capture_thread = Process(target=self.capture_images,
-                daemon=True)
+        image_capture_thread = Thread(target=self.capture_images, daemon=True)
+        #  image_capture_thread = Process(target=self.capture_images,
+                # daemon=True)
         image_capture_thread.start()
 
         # Start odom capture process
-        state_capture_thread = Process(target=self.capture_state,
+        #  state_capture_thread = Process(target=self.capture_state,
+        state_capture_thread = Thread(target=self.capture_state,
                 daemon=True)
         state_capture_thread.start()
 
     def capture_state(self): 
         while True:
-            print("in the state capture")
+            # print("in the state capture")
             robot_state_resp = self.robot_state_task.proto
             # start_time = time.time()
 
             if not robot_state_resp: 
                 return
 
-            vo_tform_robot = get_vision_tform_body(robot_state_resp.kinematic_state.transforms_snapshot)
+            vision_tform_hand = get_vision_tform_body(robot_state_resp.kinematic_state.transforms_snapshot) * get_a_tform_b(robot_state_resp.kinematic_state.transforms_snapshot, "body", "hand")
 
-            self.odom_pose = vo_tform_robot
+            # print(robot_state_resp.kinematic_state.transforms_snapshot)
+            # print("body to dock: ", get_vision_tform_body(robot_state_resp.kinematic_state.transforms_snapshot))
+            # print("hand to dock**: ", get_vision_tform_body(robot_state_resp.kinematic_state.transforms_snapshot) * get_a_tform_b(robot_state_resp.kinematic_state.transforms_snapshot, "body", "hand"))
+
+            self.odom_pose = vision_tform_hand
+            # print("odom print: ", self.odom_pose)
             acquisition_time = robot_state_resp.kinematic_state.acquisition_timestamp
             self.time = acquisition_time.seconds + acquisition_time.nanos * 1e-9
 
@@ -91,7 +99,7 @@ class SensorListener():
 
     def capture_images(self): 
         while True:
-            print("in the image capture")
+            # print("in the image capture")
             get_im_resp = self.image_task.proto
             start_time = time.time()
             if not get_im_resp:
