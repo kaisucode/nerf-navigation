@@ -265,7 +265,7 @@ def train_ngp(hparams, name, imgs, colmap_poses):
     system = NeRFSystem(hparams=hparams, imgs=imgs, colmap_poses=colmap_poses)
 
     ckpt_cb = ModelCheckpoint(dirpath=f'ckpts/{hparams.dataset_name}/{hparams.exp_name}',
-                              filename='{epoch:d}',
+                              filename=f'{name}',
                               save_weights_only=True,
                               every_n_epochs=hparams.num_epochs,
                               save_on_train_epoch_end=True,
@@ -288,9 +288,9 @@ def train_ngp(hparams, name, imgs, colmap_poses):
 
     if not hparams.val_only: # save slimmed ckpt for the last epoch
         ckpt_ = \
-            slim_ckpt(f'ckpts/{hparams.dataset_name}/{hparams.exp_name}/epoch={name}.ckpt',
+            slim_ckpt(f'ckpts/{hparams.dataset_name}/{hparams.exp_name}/{name}.ckpt',
                       save_poses=hparams.optimize_ext)
-        torch.save(ckpt_, f'ckpts/{hparams.dataset_name}/{hparams.exp_name}/epoch={name}_slim.ckpt')
+        torch.save(ckpt_, f'ckpts/{hparams.dataset_name}/{hparams.exp_name}/{name}_slim.ckpt')
 
 
 if __name__ == '__main__':
@@ -301,7 +301,12 @@ if __name__ == '__main__':
     path = os.path.join(parent, 'arr_0.npy')
     imgs = {"imgs": np.load(path)}
     # transforms.json
-    colmap_poses = {"colmap_poses": load_transform_json(parent, 0, 89)}
+    colmap_poses = {"colmap_poses": load_transform_json(parent, 0, 40)}
     # train_ngp
     name = 0
+    train_ngp(hparams=hparams, name=name, imgs=imgs, colmap_poses=colmap_poses)
+    # transforms.json
+    colmap_poses = {"colmap_poses": load_transform_json(parent, 0, 80)}
+    # train_ngp
+    name = 1
     train_ngp(hparams=hparams, name=name, imgs=imgs, colmap_poses=colmap_poses)
