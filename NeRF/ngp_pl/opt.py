@@ -22,14 +22,14 @@ def get_opts():
                         help='whether to train in HDR-NeRF setting')
 
     # loss parameters
-    parser.add_argument('--distortion_loss_w', type=float, default=0,
+    parser.add_argument('--distortion_loss_w', type=float, default=1e-3,
                         help='''weight of distortion loss (see losses.py),
                         0 to disable (default), to enable,
                         a good value is 1e-3 for real scene and 1e-2 for synthetic scene
                         ''')
 
     # training options
-    parser.add_argument('--batch_size', type=int, default=12000,
+    parser.add_argument('--batch_size', type=int, default=20000,
                         help='number of rays in a batch')
     parser.add_argument('--ray_sampling_strategy', type=str, default='all_images',
                         choices=['all_images', 'same_image'],
@@ -56,7 +56,7 @@ def get_opts():
                         help='evaluate lpips metric (consumes more VRAM)')
     parser.add_argument('--val_only', action='store_true', default=False,
                         help='run only validation (need to provide ckpt_path)')
-    parser.add_argument('--no_save_test', action='store_true', default=False,
+    parser.add_argument('--no_save_test', action='store_true', default=True,
                         help='whether to save test image and video')
 
     # misc
