@@ -1,5 +1,18 @@
 import torch
+import json
+import os
 
+
+def frame_path(frame):
+  return frame['file_path']
+
+def load_transform_json(parent, start, end):
+    # transforms.json
+    with open(os.path.join(parent, "transforms.json"), 'r') as f:
+        poses = json.load(f)
+    poses['frames'].sort(key=frame_path)
+    poses['frames'] = poses['frames'][start:end]
+    return poses
 
 def extract_model_state_dict(ckpt_path, model_name='model', prefixes_to_ignore=[]):
     checkpoint = torch.load(ckpt_path, map_location='cpu')
