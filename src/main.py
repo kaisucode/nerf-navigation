@@ -130,6 +130,23 @@ def main(argv):
 
     # task begins
     frame_id = 0
+    
+    # setup global info for NeRF
+    parent = "../../../spot_data_0/"
+    # mapping every 40 steps
+    step = 40
+    last_step = 0
+    # clean image folder for colmap
+    try:
+        shutil.rmtree(os.path.join(parent, "images"))
+    except:
+        pass
+    # clean checkpoint folder
+    try:
+        shutil.rmtree(os.path.join(".", "ckpts"))
+    except:
+        pass
+
     while not rospy.is_shutdown():
         if not sensors_listener.sensor_initialzed:
             continue
@@ -159,6 +176,33 @@ def main(argv):
                 np.array([odom.rotation.w, odom.rotation.x, odom.rotation.y, odom.rotation.z])
                 )
             timstamp_data.append(timstamp)
+
+            # start mapping
+            if len(rgb_data)%step==0:
+                # save image
+                for i in range(last_step, last_step+step, 1):
+                    im = Image.fromarray(data[i])
+                    path = os.path.join(parent, "images")
+                    if not os.path.exists(path):
+                        os.makedirs(path)
+                    im.save(os.path.join(path, f"{i:08d}.png"))
+                last_step += step
+            
+                # colmap argument
+                colmap_args = colmap_parse_args()
+                colmap_args.colmap_matcher = "exhaustive"
+                colmap_args.run_colmap = True
+                colmap_args.aabb_scale = 32
+                colmap_args.images = os.path.join(parent, "images")
+                colmap_args.overwrite = True
+                # start_colmap
+                start_colmap(colmap_args)
+            
+                # I-NGP parameters
+                hparams = get_opts()
+                hparams.root_dir = parent
+                hparams.exp_name = "Spot"
+                hparams.dataset_name = "spot_online"
 
 
         print("length of the keyframe buffer", kfd.num_keyframe)
