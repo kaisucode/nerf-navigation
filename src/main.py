@@ -218,6 +218,17 @@ def main(argv):
                 hparams.root_dir = parent
                 hparams.exp_name = "Spot"
                 hparams.dataset_name = "spot_online"
+                hparams.epoch = 2
+                hparams.scale = 0.5
+                hparams.batch_size = 20000
+                # arr_0.npy
+                imgs = {"imgs": data[:last_step]}
+                # transforms.json
+                colmap_poses = {"colmap_poses": load_transform_json(parent, 0, last_step)}
+                # train_ngp
+                name = int((last_step+0.5)/step)
+                print(name)
+                train_ngp(hparams=hparams, name=name, imgs=imgs, colmap_poses=colmap_poses)
 
 
         print("length of the keyframe buffer", kfd.num_keyframe)
