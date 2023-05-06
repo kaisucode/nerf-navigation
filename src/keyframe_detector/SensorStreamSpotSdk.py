@@ -23,7 +23,7 @@ import bosdyn.client.util
 from bosdyn.api import image_pb2
 from bosdyn.client.image import ImageClient, build_image_request
 from bosdyn.client.time_sync import TimedOutError
-from bosdyn.client.frame_helpers import VISION_FRAME_NAME, get_vision_tform_body, get_a_tform_b
+from bosdyn.client.frame_helpers import VISION_FRAME_NAME, get_vision_tform_body, get_a_tform_b, get_odom_tform_body
 
 
 _LOGGER = logging.getLogger(__name__)
@@ -35,6 +35,7 @@ class SensorListener():
         # the video stream
         self.rgb_image = None
         self.depth_image = None
+        self.vision_odom_pose = None
         self.odom_pose = None
         self.time = None
 
@@ -78,12 +79,14 @@ class SensorListener():
                 return
 
             vision_tform_hand = get_vision_tform_body(robot_state_resp.kinematic_state.transforms_snapshot) * get_a_tform_b(robot_state_resp.kinematic_state.transforms_snapshot, "body", "hand")
+            odom_tform_hand = get_odom_tform_body(robot_state_resp.kinematic_state.transforms_snapshot) * get_a_tform_b(robot_state_resp.kinematic_state.transforms_snapshot, "body", "hand")
 
             # print(robot_state_resp.kinematic_state.transforms_snapshot)
             # print("body to dock: ", get_vision_tform_body(robot_state_resp.kinematic_state.transforms_snapshot))
             # print("hand to dock**: ", get_vision_tform_body(robot_state_resp.kinematic_state.transforms_snapshot) * get_a_tform_b(robot_state_resp.kinematic_state.transforms_snapshot, "body", "hand"))
 
-            self.odom_pose = vision_tform_hand
+            self.vision_odom_pose = vision_tform_hand
+            self.odom_pose = odom_tform_hand
             # print("odom print: ", self.odom_pose)
             acquisition_time = robot_state_resp.kinematic_state.acquisition_timestamp
             self.time = acquisition_time.seconds + acquisition_time.nanos * 1e-9

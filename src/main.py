@@ -124,6 +124,8 @@ def main(argv):
 
     rgb_data = []
     depth_data = []
+    vision_odom_position_data = []
+    vision_odom_orientation_data = []
     odom_position_data = []
     odom_orientation_data = []
     timstamp_data = []
@@ -136,6 +138,7 @@ def main(argv):
         # ---- keyframe detection ----
         rgb = sensors_listener.rgb_image
         depth = sensors_listener.depth_image
+        vision_odom = sensors_listener.vision_odom_pose 
         odom = sensors_listener.odom_pose
         timstamp = sensors_listener.time
 
@@ -158,6 +161,12 @@ def main(argv):
             odom_orientation_data.append(
                 np.array([odom.rotation.w, odom.rotation.x, odom.rotation.y, odom.rotation.z])
                 )
+            vision_odom_position_data.append(
+                np.array([vision_odom.position.x, vision_odom.position.y, vision_odom.position.z])
+                )
+            vision_odom_orientation_data.append(
+                np.array([vision_odom.rotation.w, vision_odom.rotation.x, vision_odom.rotation.y, vision_odom.rotation.z])
+                )
             timstamp_data.append(timstamp)
 
 
@@ -170,17 +179,23 @@ def main(argv):
     all_depth_data = np.array(depth_data)
     all_odom_position_data = np.array(odom_position_data)
     all_odom_orientation_data = np.array(odom_orientation_data)
+    all_vision_odom_position_data = np.array(vision_odom_position_data)
+    all_vision_odom_orientation_data = np.array(vision_odom_orientation_data)
     all_timestamp_data = np.array(timstamp_data)
 
 
     print("rgb shape: ", all_rgb_data.shape)
     print("depth shape: ", all_depth_data.shape)
+    print("odom position shape: ", all_vision_odom_position_data.shape)
+    print("odom orientation shape: ", all_vision_odom_orientation_data.shape)
     print("odom position shape: ", all_odom_position_data.shape)
     print("odom orientation shape: ", all_odom_orientation_data.shape)
     print("timestamp shape: ", all_timestamp_data.shape)
     np.savez("./spot_data", 
              all_rgb_data, 
              all_depth_data, 
+             all_vision_odom_position_data,
+             all_vision_odom_orientation_data,
              all_odom_position_data, 
              all_odom_orientation_data, 
              all_timestamp_data)
