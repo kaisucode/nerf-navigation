@@ -7,7 +7,7 @@ def get_opts():
     parser.add_argument('--root_dir', type=str, required=True,
                         help='root directory of dataset')
     parser.add_argument('--dataset_name', type=str, default='nsvf',
-                        choices=['nerf', 'nsvf', 'colmap', 'nerfpp', 'rtmv', "spot", "brics"],
+                        choices=['nerf', 'nsvf', 'colmap', 'nerfpp', 'rtmv', 'spot_online', 'spot'],
                         help='which dataset to train/test')
     parser.add_argument('--split', type=str, default='train',
                         choices=['train', 'trainval', 'trainvaltest'],
@@ -29,7 +29,11 @@ def get_opts():
                         ''')
 
     # training options
+<<<<<<< HEAD
     parser.add_argument('--batch_size', type=int, default=8192,
+=======
+    parser.add_argument('--batch_size', type=int, default=20000,
+>>>>>>> 7dc1fb63126b7f0d7d26379ebf1b3712ce24eaa1
                         help='number of rays in a batch')
     parser.add_argument('--ray_sampling_strategy', type=str, default='all_images',
                         choices=['all_images', 'same_image'],
@@ -56,7 +60,7 @@ def get_opts():
                         help='evaluate lpips metric (consumes more VRAM)')
     parser.add_argument('--val_only', action='store_true', default=False,
                         help='run only validation (need to provide ckpt_path)')
-    parser.add_argument('--no_save_test', action='store_true', default=False,
+    parser.add_argument('--no_save_test', action='store_true', default=True,
                         help='whether to save test image and video')
 
     # misc

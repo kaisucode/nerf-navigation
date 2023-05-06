@@ -5,6 +5,8 @@ from .nerfpp import NeRFPPDataset
 from .rtmv import RTMVDataset
 from .spot import SpotDataset
 from .brics import BRICSDataset
+from .spot_online import SpotOnlineDataset
+# from .spot import SpotDataset
 
 dataset_dict = {'nerf': NeRFDataset,
                 'nsvf': NSVFDataset,
@@ -12,4 +14,8 @@ dataset_dict = {'nerf': NeRFDataset,
                 'nerfpp': NeRFPPDataset,
                 'rtmv': RTMVDataset,
                 "spot": SpotDataset,
-                "brics": BRICSDataset}
+                "brics": BRICSDataset,
+                'spot_online': SpotOnlineDataset}
+
+
+                # 'spot': SpotDataset}

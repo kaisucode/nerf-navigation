@@ -201,6 +201,8 @@ class SpotDataset(BaseDataset):
         "aabb_scale": 32,
         '''
 
+    def get_all_poses(self):
+        return self.poses
 
     def read_data(self):
         # self.root_dir = os.path.join(self.root_dir, "") 
@@ -329,11 +331,12 @@ if __name__== "__main__":
 
     # dataloader = SpotDataset(root_dir, split = "train", downsample = 1.0)
     # root_dir = "/home/rahul/Education/Brown/1_sem2/CSCI2952-O/Project/data"
-    # root_dir = "/home/rahul/Education/Brown/1_sem2/CSCI2952-O/Project/data/spot_data_numpy-20230430T235508Z-001/spot_data_numpy/04282023/spot_data_0.npz"
-    root_dir = "/home/rahulsajnani/Education/Brown/1_sem2/52-O/project/data/04282023-20230501T003435Z-001/04282023/spot_data_0.npz"
+    root_dir = "/home/rahul/Education/Brown/1_sem2/CSCI2952-O/Project/data/spot_data_numpy-20230430T235508Z-001/spot_data_numpy/04282023/spot_data_0.npz"
+    # root_dir = "/home/rahulsajnani/Education/Brown/1_sem2/52-O/project/data/04282023-20230501T003435Z-001/04282023/spot_data_0.npz"
     # dataloader = SpotDataset(root_dir, split = "train", downsample = 1.0)
 
     debug_poses(root_dir, end_idx = -1, scale = 5.0)
+    
 
 
     pass
