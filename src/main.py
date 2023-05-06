@@ -25,6 +25,21 @@ import cv2
 from keyframe_detector.SensorStreamSpotSdk import * 
 import time
 
+# mapping 
+import sys
+sys.path.append("../NeRF/ngp_pl/")
+import argparse
+import shutil
+import os
+import numpy as np
+from PIL import Image
+from colmap2nerf import parse_args as colmap_parse_args
+from colmap2nerf import start_colmap
+from train_online import train_ngp
+from utils import load_transform_json
+from opt import get_opts
+
+
 HOSTNAME = "gouger.rlab.cs.brown.edu"
 image_sources = ["hand_color_image", "hand_depth_in_hand_color_frame"] # sources for depth and rgb image
 sensor_time_delay = 0/60.0
@@ -132,6 +147,23 @@ def main(argv):
 
     # task begins
     frame_id = 0
+    
+    # setup global info for NeRF
+    parent = "../../../spot_data_0/"
+    # mapping every 40 steps
+    step = 40
+    last_step = 0
+    # clean image folder for colmap
+    try:
+        shutil.rmtree(os.path.join(parent, "images"))
+    except:
+        pass
+    # clean checkpoint folder
+    try:
+        shutil.rmtree(os.path.join(".", "ckpts"))
+    except:
+        pass
+
     while not rospy.is_shutdown():
         if not sensors_listener.sensor_initialzed:
             continue
@@ -168,6 +200,44 @@ def main(argv):
                 np.array([vision_odom.rotation.w, vision_odom.rotation.x, vision_odom.rotation.y, vision_odom.rotation.z])
                 )
             timstamp_data.append(timstamp)
+
+            # start mapping
+            if len(rgb_data)%step==0:
+                # save image
+                for i in range(last_step, last_step+step, 1):
+                    im = Image.fromarray(data[i])
+                    path = os.path.join(parent, "images")
+                    if not os.path.exists(path):
+                        os.makedirs(path)
+                    im.save(os.path.join(path, f"{i:08d}.png"))
+                last_step += step
+            
+                # colmap argument
+                colmap_args = colmap_parse_args()
+                colmap_args.colmap_matcher = "exhaustive"
+                colmap_args.run_colmap = True
+                colmap_args.aabb_scale = 32
+                colmap_args.images = os.path.join(parent, "images")
+                colmap_args.overwrite = True
+                # start_colmap
+                start_colmap(colmap_args)
+            
+                # I-NGP parameters
+                hparams = get_opts()
+                hparams.root_dir = parent
+                hparams.exp_name = "Spot"
+                hparams.dataset_name = "spot_online"
+                hparams.epoch = 2
+                hparams.scale = 0.5
+                hparams.batch_size = 20000
+                # arr_0.npy
+                imgs = {"imgs": data[:last_step]}
+                # transforms.json
+                colmap_poses = {"colmap_poses": load_transform_json(parent, 0, last_step)}
+                # train_ngp
+                name = int((last_step+0.5)/step)
+                print(name)
+                train_ngp(hparams=hparams, name=name, imgs=imgs, colmap_poses=colmap_poses)
 
 
         print("length of the keyframe buffer", kfd.num_keyframe)
