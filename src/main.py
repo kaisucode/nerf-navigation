@@ -25,6 +25,21 @@ import cv2
 from keyframe_detector.SensorStreamSpotSdk import * 
 import time
 
+# mapping 
+import sys
+sys.path.append("../NeRF/ngp_pl/")
+import argparse
+import shutil
+import os
+import numpy as np
+from PIL import Image
+from colmap2nerf import parse_args as colmap_parse_args
+from colmap2nerf import start_colmap
+from train_online import train_ngp
+from utils import load_transform_json
+from opt import get_opts
+
+
 HOSTNAME = "gouger.rlab.cs.brown.edu"
 image_sources = ["hand_color_image", "hand_depth_in_hand_color_frame"] # sources for depth and rgb image
 sensor_time_delay = 0/60.0
