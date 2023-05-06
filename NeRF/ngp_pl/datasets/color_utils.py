@@ -41,3 +41,21 @@ def preprocess_image(img, img_wh, blend_a=True):
     img = rearrange(img, 'h w c -> (h w) c')
 
     return img
+
+def get_image(img, img_wh, blend_a=True):
+    img = img.astype(np.float32)/255.0
+    # img[..., :3] = srgb_to_linear(img[..., :3])
+    if img.shape[2] == 4: # blend A to RGB
+        if blend_a:
+            img = img[..., :3]*img[..., -1:]+(1-img[..., -1:])
+        else:
+            img = img[..., :3]*img[..., -1:]
+
+    # print(img.shape)
+    img = cv2.resize(img, img_wh)
+    # print(img.shape)
+    if (len(img.shape) == 2):
+        img = img[..., None]
+    img = rearrange(img, 'h w c -> (h w) c')
+
+    return img
