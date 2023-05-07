@@ -14,7 +14,7 @@ if __name__ == "__main__":
     # simulator
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--dataset", type = str, default="../../../spot_data_0/", help="Binary flag for train versus inference.")
+    parser.add_argument("--dataset", type = str, default="../../../spot_data/", help="Binary flag for train versus inference.")
 
     args = parser.parse_args()
 
