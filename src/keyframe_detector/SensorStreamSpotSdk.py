@@ -7,7 +7,7 @@
 """Simple image display example."""
 
 import argparse
-import rospy
+# import rospy
 import logging
 import sys
 import time
@@ -56,7 +56,7 @@ class SensorListener():
         self.initListener()
 
     def initListener(self): 
-        rospy.init_node('sensors')
+        # rospy.init_node('sensors')
         # Start image capture process
         image_capture_thread = Thread(target=self.capture_images, daemon=True)
         #  image_capture_thread = Process(target=self.capture_images,

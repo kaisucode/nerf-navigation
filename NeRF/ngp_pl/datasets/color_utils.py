@@ -53,6 +53,7 @@ def get_image(img, img_wh, blend_a=True):
 
     # print(img.shape)
     img = cv2.resize(img, img_wh)
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     # print(img.shape)
     if (len(img.shape) == 2):
         img = img[..., None]

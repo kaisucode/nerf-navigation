@@ -17,7 +17,7 @@ class KeyframeDetector():
         self.num_keyframe = 0
         
         # keyframe detector constant
-        self.match_threshold = 40
+        self.match_threshold = 30
         pass
 
     def computeFeature(self, img_arr, output_name):
