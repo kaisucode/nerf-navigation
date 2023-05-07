@@ -149,7 +149,9 @@ def main(argv):
     frame_id = 0
     
     # setup global info for NeRF
-    parent = "../../../spot_data_0/"
+    # all the files should be stored here
+    # spot_data is same level as nerf-navigation
+    parent = "../../spot_data/"
     # mapping every 40 steps
     step = 40
     last_step = 0
@@ -160,7 +162,7 @@ def main(argv):
         pass
     # clean checkpoint folder
     try:
-        shutil.rmtree(os.path.join(".", "ckpts"))
+        shutil.rmtree(os.path.join(parent, "ckpts"))
     except:
         pass
 
@@ -218,6 +220,8 @@ def main(argv):
                 colmap_args.run_colmap = True
                 colmap_args.aabb_scale = 32
                 colmap_args.images = os.path.join(parent, "images")
+                colmap_args.text = os.path.join(parent, "text")
+                colmap_args.out = os.path.join(parent, "transforms.json")
                 colmap_args.overwrite = True
                 # start_colmap
                 start_colmap(colmap_args)

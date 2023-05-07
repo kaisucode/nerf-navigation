@@ -18,7 +18,7 @@ class ngp_model:
 
 if __name__=="__main__":
     scale = 0.5
-    ckpt_path = "ckpts/spot_online/Spot/0_slim.ckpt"
+    ckpt_path = "../../../spot_data/ckpts/spot_online/Spot/2_slim.ckpt"
 
     xyz = torch.tensor([[0., 0., 0.], 
                         [0.6, 0.7, 0.8], 
