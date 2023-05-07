@@ -126,6 +126,7 @@ def odom_to_nerf(parent, ts, qs, o2n, offset, scale=1, to_ngp=False):
         P[:3, 3] += offset
         # we rescale scene by 20 in ngp dataloader
         if to_ngp:
+            P[:, 1:3] *= -1
             P[:3, 3] /= 20
         poses.append(P)
     return np.array(poses)
@@ -141,8 +142,8 @@ if __name__=="__main__":
     #print(o2n)
     #print(offset)
 
-    poses = odom_to_nerf(parent, ts, qs, o2n, offset, scale=1, to_ngp=False)
+    poses = odom_to_nerf(parent, ts, qs, o2n, offset, scale=1, to_ngp=True)
     print(poses.shape)
 
-    poses = odom_to_nerf(parent, ts, qs, o2n, offset, scale=1, to_ngp=False)
-    save_as_transform_json(parent, poses)
+    #poses = odom_to_nerf(parent, ts, qs, o2n, offset, scale=1, to_ngp=True)
+    #save_as_transform_json(parent, poses)
