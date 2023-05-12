@@ -264,7 +264,7 @@ class NeRFSystem(LightningModule):
 def train_ngp(hparams, name, imgs, colmap_poses):
     system = NeRFSystem(hparams=hparams, imgs=imgs, colmap_poses=colmap_poses)
 
-    ckpt_cb = ModelCheckpoint(dirpath=f'ckpts/{hparams.dataset_name}/{hparams.exp_name}',
+    ckpt_cb = ModelCheckpoint(dirpath=f'../../spot_data/ckpts/{hparams.dataset_name}/{hparams.exp_name}',
                               filename=f'{name}',
                               save_weights_only=True,
                               every_n_epochs=hparams.num_epochs,
@@ -288,9 +288,9 @@ def train_ngp(hparams, name, imgs, colmap_poses):
 
     if not hparams.val_only: # save slimmed ckpt for the last epoch
         ckpt_ = \
-            slim_ckpt(f'ckpts/{hparams.dataset_name}/{hparams.exp_name}/{name}.ckpt',
+            slim_ckpt(f'../../spot_data/ckpts/{hparams.dataset_name}/{hparams.exp_name}/{name}.ckpt',
                       save_poses=hparams.optimize_ext)
-        torch.save(ckpt_, f'ckpts/{hparams.dataset_name}/{hparams.exp_name}/{name}_slim.ckpt')
+        torch.save(ckpt_, f'../../spot_data/ckpts/{hparams.dataset_name}/{hparams.exp_name}/{name}_slim.ckpt')
 
 
 if __name__ == '__main__':

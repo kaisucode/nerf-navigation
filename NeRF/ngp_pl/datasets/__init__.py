@@ -6,7 +6,7 @@ from .rtmv import RTMVDataset
 from .spot import SpotDataset
 from .brics import BRICSDataset
 from .spot_online import SpotOnlineDataset
-# from .spot import SpotDataset
+from .spot_vis import SpotVisDataset
 
 dataset_dict = {'nerf': NeRFDataset,
                 'nsvf': NSVFDataset,
@@ -15,7 +15,5 @@ dataset_dict = {'nerf': NeRFDataset,
                 'rtmv': RTMVDataset,
                 "spot": SpotDataset,
                 "brics": BRICSDataset,
-                'spot_online': SpotOnlineDataset}
-
-
-                # 'spot': SpotDataset}
+                'spot_online': SpotOnlineDataset,
+                'spot_vis': SpotVisDataset}

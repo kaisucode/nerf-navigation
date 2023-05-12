@@ -46,6 +46,8 @@ def parse_args():
     parser.add_argument("--vocab_path", default="", help="Vocabulary tree path.")
     parser.add_argument("--overwrite", action="store_true", help="Do not ask for confirmation for overwriting existing images and COLMAP data.")
     parser.add_argument("--mask_categories", nargs="*", type=str, default=[], help="Object categories that should be masked out from the training images. See `scripts/category2id.json` for supported categories.")
+    parser.add_argument("--dataset", type = str, default="../../../spot_data_0/", help="Binary flag for train versus inference.")
+    
     args = parser.parse_args()
     return args
 

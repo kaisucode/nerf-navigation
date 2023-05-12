@@ -19,7 +19,7 @@ from bosdyn.client.gripper_camera_param import GripperCameraParamClient
 
 import logging
 from keyframe_detector.KeyframeDetection import *
-import rospy
+# import rospy
 
 import cv2
 from keyframe_detector.SensorStreamSpotSdk import * 
@@ -32,7 +32,7 @@ import argparse
 import shutil
 import os
 import numpy as np
-from PIL import Image
+# from PIL import Image
 from colmap2nerf import parse_args as colmap_parse_args
 from colmap2nerf import start_colmap
 from train_online import train_ngp
@@ -41,6 +41,7 @@ from opt import get_opts
 
 
 HOSTNAME = "gouger.rlab.cs.brown.edu"
+# HOSTNAME = "tusker.rlab.cs.brown.edu"
 image_sources = ["hand_color_image", "hand_depth_in_hand_color_frame"] # sources for depth and rgb image
 sensor_time_delay = 0/60.0
 LOGGER = logging.getLogger(__name__)
@@ -135,7 +136,7 @@ def main(argv):
 
     # task settings
     loop_hz = 60
-    rate = rospy.Rate(loop_hz)
+    # rate = rospy.Rate(loop_hz)
 
     rgb_data = []
     depth_data = []
@@ -149,9 +150,11 @@ def main(argv):
     frame_id = 0
     
     # setup global info for NeRF
-    parent = "../../../spot_data_0/"
+    # all the files should be stored here
+    # spot_data is same level as nerf-navigation
+    parent = "../../spot_data/"
     # mapping every 40 steps
-    step = 40
+    step = 100
     last_step = 0
     # clean image folder for colmap
     try:
@@ -160,11 +163,11 @@ def main(argv):
         pass
     # clean checkpoint folder
     try:
-        shutil.rmtree(os.path.join(".", "ckpts"))
+        shutil.rmtree(os.path.join(parent, "ckpts"))
     except:
         pass
 
-    while not rospy.is_shutdown():
+    while True:
         if not sensors_listener.sensor_initialzed:
             continue
         # ---- keyframe detection ----
@@ -203,13 +206,16 @@ def main(argv):
 
             # start mapping
             if len(rgb_data)%step==0:
+                # save odom
+                np.save(os.path.join(parent, "arr_2.npy"), np.array(vision_odom_position_data))
+                np.save(os.path.join(parent, "arr_3.npy"), np.array(vision_odom_orientation_data))
                 # save image
                 for i in range(last_step, last_step+step, 1):
-                    im = Image.fromarray(data[i])
+                    im = np.array(rgb_data[i])
                     path = os.path.join(parent, "images")
                     if not os.path.exists(path):
                         os.makedirs(path)
-                    im.save(os.path.join(path, f"{i:08d}.png"))
+                    cv2.imwrite(os.path.join(path, f"{i:08d}.png"), im)
                 last_step += step
             
                 # colmap argument
@@ -218,6 +224,8 @@ def main(argv):
                 colmap_args.run_colmap = True
                 colmap_args.aabb_scale = 32
                 colmap_args.images = os.path.join(parent, "images")
+                colmap_args.text = os.path.join(parent, "text")
+                colmap_args.out = os.path.join(parent, "transforms.json")
                 colmap_args.overwrite = True
                 # start_colmap
                 start_colmap(colmap_args)
@@ -227,11 +235,11 @@ def main(argv):
                 hparams.root_dir = parent
                 hparams.exp_name = "Spot"
                 hparams.dataset_name = "spot_online"
-                hparams.epoch = 2
+                hparams.num_epochs = 1
                 hparams.scale = 0.5
-                hparams.batch_size = 20000
+                hparams.batch_size = 10000
                 # arr_0.npy
-                imgs = {"imgs": data[:last_step]}
+                imgs = {"imgs": rgb_data[:last_step]}
                 # transforms.json
                 colmap_poses = {"colmap_poses": load_transform_json(parent, 0, last_step)}
                 # train_ngp

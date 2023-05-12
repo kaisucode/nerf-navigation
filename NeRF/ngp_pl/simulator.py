@@ -8,12 +8,29 @@ from colmap2nerf import start_colmap
 from train_online import train_ngp
 from utils import load_transform_json
 from opt import get_opts
-
+import argparse
 
 if __name__ == "__main__":
     # simulator
-    parent = "../../../spot_data_0/"
-    data = np.load(os.path.join(parent, "arr_0.npy"))
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--dataset", type = str, default="../../../spot_data/", help="Binary flag for train versus inference.")
+
+    args = parser.parse_args()
+
+        # parent = os.path.join(args.dataset, "")
+    if os.path.exists(os.path.join(os.path.join(args.dataset, ""), "arr_0.npy")):
+        parent = os.path.join(args.dataset, "")
+        data = np.load(os.path.join(os.path.join(args.dataset, ""), "arr_0.npy"))
+    else:
+        parent = os.path.dirname(args.dataset)
+        data = np.load(args.dataset)["arr_0"]
+
+    print(data.shape)
+    
+    # 
+    # data = np.load(os.path.join(parent, "arr_0.npy"))
+
     
     # mapping every 40 steps
     counter = 0
@@ -52,6 +69,8 @@ if __name__ == "__main__":
             colmap_args.run_colmap = True
             colmap_args.aabb_scale = 32
             colmap_args.images = os.path.join(parent, "images")
+            colmap_args.text = os.path.join(parent, "text")
+            colmap_args.out = os.path.join(parent, "transforms.json")
             colmap_args.overwrite = True
             # start_colmap
             start_colmap(colmap_args)
