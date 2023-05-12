@@ -9,7 +9,7 @@ import os
 np.random.seed(0)
 
 # sys.path.insert(0, "/home/lishuo_p14s/nerf-navigation/NeRF/ngp_pl")  # TODO
-sys.path.insert(0, "/home/rahulsajnani/Education/Brown/1_sem2/52-O/project/nerf-navigation/NeRF/ngp_pl")  # TODO
+sys.path.insert(0, "../../../../NeRF/ngp_pl/")  # TODO
 
 print(sys.path)
 # sys.path.append("/home/lishuo_p14s/nerf-navigation/NeRF/ngp_pl")  # TODO
@@ -380,8 +380,8 @@ if __name__ == '__main__':
     height = 1
     goal = np.array([5, 0.2])
     
-    parent_dir = "../../../../spot_data/" # TODO
-    mapping_path = "../../../../spot_data/ckpts/spot_online/Spot/1_slim.ckpt" # TODO
+    parent_dir = "../../../../../spot_data/" # TODO
+    mapping_path = "../../../../../spot_data/ckpts/spot_online/Spot/2_slim.ckpt" # TODO
     
     # parent_dir = "../../../../spot_data_best/spot_data/" # TODO
     # mapping_path = "../../../../spot_data_best/spot_data/ckpts/spot_online/Spot/2_slim.ckpt" # TODO

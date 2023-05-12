@@ -253,8 +253,8 @@ class WasdInterface(object):
         self._robot_id = None
         self._lease_keepalive = None
 
-        self.parent_dir = "../../../../spot_data/" # TODO
-        self.mapping_path = "../../../../spot_data/ckpts/spot_online/Spot/1_slim.ckpt" # TODO
+        self.parent_dir = "../../../../../spot_data/" # TODO
+        self.mapping_path = "../../../../../spot_data/ckpts/spot_online/Spot/2_slim.ckpt" # TODO
         self.colmap_scale = 0.5
         self.ts = None
         self.qs = None
