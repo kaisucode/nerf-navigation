@@ -29,7 +29,7 @@ def get_opts():
                         ''')
 
     # training options
-    parser.add_argument('--batch_size', type=int, default=20000,
+    parser.add_argument('--batch_size', type=int, default=15000,
                         help='number of rays in a batch')
     parser.add_argument('--ray_sampling_strategy', type=str, default='all_images',
                         choices=['all_images', 'same_image'],

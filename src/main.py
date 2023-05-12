@@ -40,8 +40,8 @@ from utils import load_transform_json
 from opt import get_opts
 
 
-# HOSTNAME = "gouger.rlab.cs.brown.edu"
-HOSTNAME = "tusker.rlab.cs.brown.edu"
+HOSTNAME = "gouger.rlab.cs.brown.edu"
+# HOSTNAME = "tusker.rlab.cs.brown.edu"
 image_sources = ["hand_color_image", "hand_depth_in_hand_color_frame"] # sources for depth and rgb image
 sensor_time_delay = 0/60.0
 LOGGER = logging.getLogger(__name__)
@@ -206,6 +206,9 @@ def main(argv):
 
             # start mapping
             if len(rgb_data)%step==0:
+                # save odom
+                np.save(os.path.join(parent, "arr_2.npy"), np.array(vision_odom_position_data))
+                np.save(os.path.join(parent, "arr_3.npy"), np.array(vision_odom_orientation_data))
                 # save image
                 for i in range(last_step, last_step+step, 1):
                     im = np.array(rgb_data[i])
@@ -232,9 +235,9 @@ def main(argv):
                 hparams.root_dir = parent
                 hparams.exp_name = "Spot"
                 hparams.dataset_name = "spot_online"
-                hparams.epoch = 2
+                hparams.num_epochs = 1
                 hparams.scale = 0.5
-                hparams.batch_size = 20000
+                hparams.batch_size = 10000
                 # arr_0.npy
                 imgs = {"imgs": rgb_data[:last_step]}
                 # transforms.json
