@@ -1,0 +1,6 @@
+-f ../../../prebuilt
+
+bosdyn-client >= 3.1
+
+requests==2.26.0
+PyQt5==5.15.2
